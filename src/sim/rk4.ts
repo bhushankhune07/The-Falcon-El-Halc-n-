@@ -212,7 +212,8 @@ export class RK4Integrator {
   public toSimulationState(
     time_s: number,
     state: StateVector,
-    info: ReturnType<RK4Integrator['evaluateDerivatives']>
+    info: ReturnType<RK4Integrator['evaluateDerivatives']>,
+    events: string[] = []
   ): SimulationState {
     const r = Math.sqrt(state.x * state.x + state.y * state.y);
     const altitude_m = Math.max(0, r - R_EARTH);
@@ -233,6 +234,7 @@ export class RK4Integrator {
 
     // Vis-viva orbital elements
     const orb = computeOrbitalElements(r, speed_ms, flightPathAngle_deg);
+    const finalEvents = events.length > 0 ? events : info.events;
 
     return {
       time_s,
@@ -259,9 +261,9 @@ export class RK4Integrator {
       apogee_km: orb.apogee_km,
       eccentricity: orb.eccentricity,
       activeStages: info.activeStageNames,
-      events: info.events,
+      events: finalEvents,
       isOrbitAchieved: orb.isBoundOrbit && orb.perigee_km > 150.0,
-      isStagingEvent: info.events.length > 0,
+      isStagingEvent: finalEvents.length > 0,
     };
   }
 

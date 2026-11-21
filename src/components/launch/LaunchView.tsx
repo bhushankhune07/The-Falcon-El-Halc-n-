@@ -37,8 +37,13 @@ export function LaunchView({
   const maxTime_s = trajectory.summary.cutoffTime_s;
   const altKm = currentState.altitude_m / 1000.0;
 
+  // First state crossing 125 km altitude (Item D10)
+  const t125km = trajectory.states.find((s) => s.altitude_m >= 125000)?.time_s ?? 180;
+
+  // Clamped jump helper
   const jumpTo = (t_s: number, cam?: CameraMode) => {
-    onSeek(t_s);
+    const clamped = Math.max(0, Math.min(maxTime_s, t_s));
+    onSeek(clamped);
     if (cam) onSetCameraMode(cam);
   };
 
@@ -52,6 +57,7 @@ export function LaunchView({
         <div className="flex-1 w-full h-full relative overflow-hidden bg-slate-950">
           <MissionCanvas
             simFrame={simFrame}
+            mission={mission}
             cameraMode={cameraMode}
             onCameraModeChange={onSetCameraMode}
           />
@@ -152,7 +158,7 @@ export function LaunchView({
               </div>
             </div>
 
-            {/* Quick Demo Milestones */}
+            {/* Quick Demo Milestones (Clamped to maxTime_s, Item D10) */}
             <div className="flex items-center gap-1.5 text-xs font-mono">
               <button
                 onClick={() => jumpTo(0, 'pad')}
@@ -173,14 +179,14 @@ export function LaunchView({
                 PS1 Sep (110s)
               </button>
               <button
-                onClick={() => jumpTo(180, 'orbit')}
+                onClick={() => jumpTo(t125km, 'orbit')}
                 className="px-2.5 py-1 rounded bg-sky-950 border border-sky-800 hover:bg-sky-900 text-sky-200 font-semibold transition-colors flex items-center gap-1"
               >
                 <FastForward className="w-3 h-3 text-cyan-400" />
                 125 km (Cross-Fade)
               </button>
               <button
-                onClick={() => jumpTo(1029, 'orbit')}
+                onClick={() => jumpTo(maxTime_s, 'orbit')}
                 className="px-2.5 py-1 rounded bg-emerald-950 border border-emerald-800 hover:bg-emerald-900 text-emerald-200 font-semibold transition-colors flex items-center gap-1"
               >
                 <Orbit className="w-3 h-3 text-emerald-400" />
@@ -198,6 +204,7 @@ export function LaunchView({
         <TelemetrySidebar
           trajectory={trajectory}
           currentState={currentState}
+          mission={mission}
           publishedMilestones={mission.publishedMilestones}
         />
       </div>

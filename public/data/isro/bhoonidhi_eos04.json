@@ -1,23 +1,22 @@
 {
   "dataset": "EOS-04 / RISAT-1A C-band SAR",
   "metadata": {
+    "isPlaceholder": true,
     "satellite": "EOS-04",
     "sensor": "C-SAR",
     "instrumentMode": "MRS (Medium Resolution ScanSAR)",
-    "productLevel": "Level-2 GeoTIFF (Terrain Geo-Referenced) / Level-1B (Ground Range)",
+    "productLevel": "Level-2 GeoTIFF (Terrain Geo-Referenced)",
     "polarisation": "Dual-Pol (HH + HV)",
     "band": "C-band (5.35 GHz, λ ≈ 5.6 cm)",
     "resolution_m": 25.0,
     "swathWidth_km": 115.0,
     "incidentAngle_deg": "22.0 - 41.5",
-    "orbitNumber": 1284,
     "orbitType": "Sun-Synchronous Polar Orbit (SSO)",
     "orbitAltitude_km": 529.0,
     "orbitInclination_deg": 97.6,
     "repeatCycle_days": 17,
     "acquisitionTimestampUTC": "2022-02-14T01:18:24.000Z",
     "bhoonidhiProductId": "EOS04_CSAR_MRS_L2_20220214T011824_IN_AP_001",
-    "quicklookUrl": "/data/isro/eos04_quicklook_sample.png",
     "geographicBounds": {
       "center": {
         "latitude": 16.5062,
@@ -41,11 +40,6 @@
       "Active microwave illumination operates day & night regardless of cloud cover or monsoon conditions",
       "5.35 GHz C-band radar interacts with canopy structures and saturated soils for precise moisture distinction",
       "529 km SSO maintains consistent 06:00/18:00 LTAN ground illumination angles for multi-temporal coherence"
-    ],
-    "calibration": {
-      "sigma0CalibrationConstant_dB": -83.2,
-      "nesz_dB": -22.5,
-      "radiometricAccuracy_dB": 0.85
-    }
+    ]
   }
 }

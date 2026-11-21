@@ -149,7 +149,7 @@ export function DownrangeMap({ mission, trajectory }: Props) {
       {/* Mandatory Scientific Honesty Map Disclaimer */}
       <div className="flex-none px-4 py-2 bg-slate-950/95 border-t border-slate-800 text-[10px] font-mono text-slate-400">
         <span className="text-amber-400 font-semibold">NOTE: </span>
-        Indicative corridor computed by our model, not an official range-safety hazard area. 2D planar ascent; coastal dogleg maneuver not modelled.
+        Illustrative hand-placed polygons, not model output. 2D planar ascent; coastal dogleg maneuver not modelled.
       </div>
     </div>
   );

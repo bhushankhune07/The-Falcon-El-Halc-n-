@@ -168,7 +168,7 @@
       "expectedAltitude_km": 235.0,
       "expectedVelocity_ms": 7850.0,
       "tolerancePct": 10.0,
-      "isPublished": true
+      "isPublished": false
     }
   ],
   "provenance": {

@@ -10,16 +10,22 @@ import { PitchScheduleNode, ChallengeModeModifiers } from './types';
 export class GuidanceProgram {
   private nodes: PitchScheduleNode[];
   private pitchKickDelta_deg: number;
+  private targetAlt_m: number;
 
-  constructor(nodes: PitchScheduleNode[], modifiers?: ChallengeModeModifiers) {
+  constructor(
+    nodes: PitchScheduleNode[],
+    modifiers?: ChallengeModeModifiers,
+    targetAlt_m: number = 534000.0
+  ) {
     // Sort nodes chronologically
     this.nodes = [...nodes].sort((a, b) => a.time_s - b.time_s);
     this.pitchKickDelta_deg = modifiers?.enabled ? modifiers.pitchKickDeg : 0;
+    this.targetAlt_m = targetAlt_m;
   }
 
   /**
    * Evaluates commanded pitch angle (deg from local horizontal) at time t (seconds)
-   * With closed-loop Auto-Guidance flight path nulling for orbital circularization (t >= 500s)
+   * With closed-loop Auto-Guidance flight path nulling for orbital circularization (t >= 750s)
    */
   public getPitchAngle(time_s: number, vr_ms: number = 0, vth_ms: number = 1, altitude_m: number = 534000): number {
     if (this.nodes.length === 0) return 90.0;
@@ -59,11 +65,10 @@ export class GuidanceProgram {
     }
 
     // Auto-Guidance circularization control (t >= 750s, PS4 terminal insertion phase):
-    // Smoothly nulls vertical rate and circularizes at target altitude (534 km)
+    // Smoothly nulls vertical rate and circularizes at mission target altitude
     if (time_s >= 750.0 && vth_ms > 1000.0) {
-      const targetAlt_m = 534000.0;
-      const altError_m = targetAlt_m - altitude_m;
-      // Desired vertical rate (m/s) as it approaches 534 km
+      const altError_m = this.targetAlt_m - altitude_m;
+      // Desired vertical rate (m/s) as it approaches target altitude
       const desiredVr_ms = Math.max(-10.0, Math.min(15.0, altError_m / 25.0));
       const vrError_ms = desiredVr_ms - vr_ms;
       

@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
+import { MissionConfig } from '../../sim';
 import {
   getProceduralRocketDecal,
   getProceduralSolarPanelTexture,
@@ -10,10 +11,11 @@ import {
 
 interface Props {
   simFrame: SimFrameState;
+  mission?: MissionConfig;
   showInternalPayload?: boolean;
 }
 
-export function ProceduralPSLV({ simFrame }: Props) {
+export function ProceduralPSLV({ simFrame, mission }: Props) {
   const rootRef = useRef<THREE.Group>(null);
   const fairingLeftRef = useRef<THREE.Group>(null);
   const fairingRightRef = useRef<THREE.Group>(null);
@@ -36,16 +38,31 @@ export function ProceduralPSLV({ simFrame }: Props) {
   const straponRadius = 0.5;
   const straponHeight = 12.0;
 
-  // Staging elapsed times for smooth drift physics
+  // Staging elapsed times derived from mission stages
   const t = simFrame.time_s;
-  const dtGround = Math.max(0, t - 69.9);
-  const dtAir = Math.max(0, t - 92.0);
-  const dtPS1 = Math.max(0, t - 109.8);
-  const dtFairing = simFrame.fairingSeparated ? Math.max(0, t - 176.6) : 0;
-  const dtPS2 = Math.max(0, t - 263.2);
-  const dtPS3 = Math.max(0, t - 580.0);
+  const stages = mission?.stages ?? [];
+  const ground = stages.find((s) => s.type === 'strap_on_ground');
+  const air = stages.find((s) => s.type === 'strap_on_air');
+  const ps1 = stages.find((s) => s.type === 'ps1_core');
+  const ps2 = stages.find((s) => s.type === 'ps2');
+  const ps3 = stages.find((s) => s.type === 'ps3');
+  const fairing = mission?.fairing;
 
-  // Smooth deployment of satellite solar panels and SAR antenna once in orbit/cutoff
+  const groundSep = ground?.separationTime_s ?? 69.9;
+  const airSep = air?.separationTime_s ?? 92.0;
+  const ps1Sep = ps1?.separationTime_s ?? 109.8;
+  const fairingTime = fairing?.jettisonTime_s ?? 176.6;
+  const ps2Sep = ps2?.separationTime_s ?? 263.2;
+  const ps3Sep = ps3?.separationTime_s ?? 580.0;
+
+  const dtGround = Math.max(0, t - groundSep);
+  const dtAir = Math.max(0, t - airSep);
+  const dtPS1 = Math.max(0, t - ps1Sep);
+  const dtFairing = simFrame.fairingSeparated ? Math.max(0, t - fairingTime) : 0;
+  const dtPS2 = Math.max(0, t - ps2Sep);
+  const dtPS3 = Math.max(0, t - ps3Sep);
+
+  // Smooth deployment of satellite solar panels and SAR antenna gated on ps4Cutoff
   useFrame((_, delta) => {
     if (simFrame.fairingSeparated) {
       // Split fairing halves
@@ -64,16 +81,16 @@ export function ProceduralPSLV({ simFrame }: Props) {
       }
     }
 
-    // Solar panels unfolding
+    // Solar panels unfolding gated on ps4Cutoff
     if (solarLeftRef.current && solarRightRef.current) {
-      const targetScaleX = simFrame.isOrbitAchieved || simFrame.ps4Cutoff ? 1.0 : 0.05;
+      const targetScaleX = simFrame.ps4Cutoff ? 1.0 : 0.05;
       solarLeftRef.current.scale.x = THREE.MathUtils.damp(solarLeftRef.current.scale.x, targetScaleX, 3.0, delta);
       solarRightRef.current.scale.x = THREE.MathUtils.damp(solarRightRef.current.scale.x, targetScaleX, 3.0, delta);
     }
 
-    // SAR antenna deployment tilt
+    // SAR antenna deployment tilt gated on ps4Cutoff
     if (sarAntennaRef.current) {
-      const targetRotX = simFrame.isOrbitAchieved || simFrame.ps4Cutoff ? Math.PI * 0.25 : 0;
+      const targetRotX = simFrame.ps4Cutoff ? Math.PI * 0.25 : 0;
       sarAntennaRef.current.rotation.x = THREE.MathUtils.damp(sarAntennaRef.current.rotation.x, targetRotX, 2.5, delta);
     }
   });

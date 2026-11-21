@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
@@ -10,39 +10,50 @@ import {
 
 interface Props {
   simFrame: SimFrameState;
+  targetOrbit?: {
+    altitude_km: number;
+    inclination_deg: number;
+  };
 }
 
-export function OrbitScene({ simFrame }: Props) {
+export function OrbitScene({ simFrame, targetOrbit }: Props) {
   const satelliteGroupRef = useRef<THREE.Group>(null);
   const radarConeRef = useRef<THREE.Mesh>(null);
   const radarFootprintRef = useRef<THREE.Mesh>(null);
   const solarWingsRef = useRef<THREE.Group>(null);
 
+  // Hoisted THREE.Vector3 allocations for useFrame (Item D12)
+  const targetVecRef = useRef(new THREE.Vector3());
+  const normVecRef = useRef(new THREE.Vector3());
+  const groundPosRef = useRef(new THREE.Vector3());
+  const originRef = useRef(new THREE.Vector3(0, 0, 0));
+
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
   const radarTexture = useMemo(() => getProceduralRadarTexture(), []);
 
   const earthRadius = 60.0;
-  // Scaled orbital radius: Earth (60) + altitude proportion (534 km / 6378 km * 60 ~= 5.0) -> ~65.0
+  const incDeg = targetOrbit?.inclination_deg ?? 97.6;
+  const incRad = (incDeg * Math.PI) / 180.0;
+  const targetAltKm = targetOrbit?.altitude_km ?? 529.0;
+  const targetOrbitRadius = earthRadius + (targetAltKm / 6378.137) * earthRadius;
+
   const orbitRadius = earthRadius + (Math.max(120000, simFrame.altitude_m) / 6378137.0) * earthRadius;
 
-  // Compute 3D orbit trajectory arc points
+  // Compute 3D orbit trajectory arc points derived from mission.targetOrbit
   const trajectoryPoints = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     const count = 120;
-    // 97.6° SSO inclination: orbit plane is tilted ~8° from pure polar
-    const incRad = (97.6 * Math.PI) / 180.0;
-    const r = earthRadius + 5.0; // 529 km orbit
+    const r = targetOrbitRadius;
 
     for (let i = 0; i <= count; i++) {
       const u = (i / count) * Math.PI * 2.0;
-      // Orbit in inclined plane
       const ox = r * Math.sin(u);
       const oy = r * Math.cos(u) * Math.cos(incRad);
       const oz = r * Math.cos(u) * Math.sin(incRad);
       pts.push(new THREE.Vector3(ox, oy, oz));
     }
     return pts;
-  }, [earthRadius]);
+  }, [earthRadius, targetOrbitRadius, incRad]);
 
   const trajectoryGeometry = useMemo(() => {
     return new THREE.BufferGeometry().setFromPoints(trajectoryPoints);
@@ -57,13 +68,17 @@ export function OrbitScene({ simFrame }: Props) {
     return new THREE.Line(trajectoryGeometry, mat);
   }, [trajectoryGeometry]);
 
-  // Position of EOS-04 satellite along the orbit arc based on simulation downrange/progress
+  // Clean disposal of trajectory line geometry and material on unmount (Item D12)
+  useEffect(() => {
+    return () => {
+      trajectoryGeometry.dispose();
+      (trajectoryLine.material as THREE.Material).dispose();
+    };
+  }, [trajectoryGeometry, trajectoryLine]);
+
+  // Position of satellite along the orbit arc based on simulation progress
   useFrame((_, delta) => {
-    // Map time or downrange to orbital angle
-    // PS4 cutoff at ~1030s reaches injection position over Bay of Bengal / Indian Ocean
     const progress = Math.min(1.0, Math.max(0.0, (simFrame.time_s - 120) / 910.0));
-    // Orbital angle from Sriharikota liftoff (u = 0.35) into polar orbit
-    const incRad = (97.6 * Math.PI) / 180.0;
     const orbitAngle = 0.35 + progress * 1.8;
 
     const satX = orbitRadius * Math.sin(orbitAngle);
@@ -72,23 +87,21 @@ export function OrbitScene({ simFrame }: Props) {
 
     if (satelliteGroupRef.current) {
       satelliteGroupRef.current.position.set(satX, satY, satZ);
-      // Tangent direction along orbit for spacecraft attitude alignment
       const nextAngle = orbitAngle + 0.01;
-      const targetVec = new THREE.Vector3(
+      targetVecRef.current.set(
         orbitRadius * Math.sin(nextAngle),
         orbitRadius * Math.cos(nextAngle) * Math.cos(incRad),
         orbitRadius * Math.cos(nextAngle) * Math.sin(incRad)
       );
-      satelliteGroupRef.current.lookAt(targetVec);
+      satelliteGroupRef.current.lookAt(targetVecRef.current);
     }
 
-    // Radar cone and footprint animation when orbit is achieved or PS4 cuts off
-    const isRadarActive = simFrame.isOrbitAchieved || simFrame.time_s >= 800;
+    // Radar cone and footprint animation gated on ps4Cutoff (Item D11)
+    const isRadarActive = simFrame.ps4Cutoff;
 
     if (radarConeRef.current) {
       radarConeRef.current.visible = isRadarActive;
       if (isRadarActive) {
-        // Radar pulse animation
         const pulse = 0.35 + Math.sin(simFrame.time_s * 4.0) * 0.12;
         (radarConeRef.current.material as THREE.MeshBasicMaterial).opacity = pulse;
       }
@@ -97,15 +110,14 @@ export function OrbitScene({ simFrame }: Props) {
     if (radarFootprintRef.current) {
       radarFootprintRef.current.visible = isRadarActive;
       if (isRadarActive) {
-        // Track ground point directly below satellite
-        const norm = new THREE.Vector3(satX, satY, satZ).normalize();
-        const groundPos = norm.clone().multiplyScalar(earthRadius + 0.15);
-        radarFootprintRef.current.position.copy(groundPos);
-        radarFootprintRef.current.lookAt(new THREE.Vector3(0, 0, 0));
+        normVecRef.current.set(satX, satY, satZ).normalize();
+        groundPosRef.current.copy(normVecRef.current).multiplyScalar(earthRadius + 0.15);
+        radarFootprintRef.current.position.copy(groundPosRef.current);
+        radarFootprintRef.current.lookAt(originRef.current);
       }
     }
 
-    // Solar array deployment animation
+    // Solar array deployment animation gated on ps4Cutoff (Item D11)
     if (solarWingsRef.current) {
       const targetScale = isRadarActive ? 1.0 : 0.1;
       solarWingsRef.current.scale.x = THREE.MathUtils.damp(
@@ -125,17 +137,17 @@ export function OrbitScene({ simFrame }: Props) {
       {/* 2. Orbit Trajectory Arc Line */}
       <primitive object={trajectoryLine} />
 
-      {/* 3. Upper Stage PS4 + EOS-04 Spacecraft in Orbit */}
+      {/* 3. Upper Stage PS4 + Satellite in Orbit */}
       <group ref={satelliteGroupRef}>
-        {/* Upper Stage PS4 Tank (if not yet separated) */}
-        {!simFrame.isOrbitAchieved ? (
+        {/* Upper Stage PS4 Tank (if not yet separated/cutoff) */}
+        {!simFrame.ps4Cutoff ? (
           <mesh position={[0, 0, -1.2]}>
             <cylinderGeometry args={[0.5, 0.5, 1.4, 16]} />
             <meshStandardMaterial color="#64748b" metalness={0.8} />
           </mesh>
         ) : null}
 
-        {/* EOS-04 Spacecraft Main Body (Gold Thermal MLI) */}
+        {/* Spacecraft Main Body (Gold Thermal MLI) */}
         <mesh castShadow>
           <boxGeometry args={[1.2, 1.4, 1.0]} />
           <meshStandardMaterial color="#eab308" metalness={0.9} roughness={0.2} />

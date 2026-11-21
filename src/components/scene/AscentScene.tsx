@@ -6,17 +6,25 @@ import { ProceduralPSLV } from './ProceduralPSLV';
 import { ExhaustPlume } from './ExhaustPlume';
 import { SriharikotaGround } from './SriharikotaGround';
 import { AtmosphereSky } from './AtmosphereSky';
+import { MissionConfig } from '../../sim';
 
 interface Props {
   simFrame: SimFrameState;
   cameraMode: CameraMode;
+  mission?: MissionConfig;
 }
 
-export function AscentScene({ simFrame, cameraMode }: Props) {
+export function AscentScene({ simFrame, cameraMode, mission }: Props) {
   const rocketGroupRef = useRef<THREE.Group>(null);
+  const targetCamPosRef = useRef(new THREE.Vector3(-18, 16, 36));
 
   // Update rocket pitch tilt smoothly in floating origin
   useFrame((state, delta) => {
+    if (state.camera.far !== 400000) {
+      state.camera.far = 400000;
+      state.camera.updateProjectionMatrix();
+    }
+
     if (rocketGroupRef.current) {
       // 90° = vertical, 0° = horizontal
       const pitchRad = (simFrame.pitch_deg * Math.PI) / 180.0;
@@ -34,17 +42,13 @@ export function AscentScene({ simFrame, cameraMode }: Props) {
     if (cameraMode === 'pad') {
       // Pad tracking camera: looks up from ground at rocket
       const cam = state.camera;
-      // Rocket height in camera space is at altitude_m, but in floating origin rocket is at (0, 20, 0)
-      // and ground is at (0, -altitude_m, 0).
-      // So if camera is placed relative to ground:
       const groundY = -simFrame.altitude_m;
       cam.position.set(-45, groundY + 12, 65);
       cam.lookAt(0, 20, 0);
     } else if (cameraMode === 'chase') {
       // Rocket chase camera: smooth follow behind and below
       const cam = state.camera;
-      const targetCamPos = new THREE.Vector3(-18, 16, 36);
-      cam.position.lerp(targetCamPos, delta * 3.0);
+      cam.position.lerp(targetCamPosRef.current, delta * 3.0);
       cam.lookAt(0, 22, 0);
     }
   });
@@ -61,11 +65,16 @@ export function AscentScene({ simFrame, cameraMode }: Props) {
         time_s={simFrame.time_s}
       />
 
-      {/* Floating-Origin Rocket Group (Centers near origin) */}
-      <group ref={rocketGroupRef} position={[0, 0, 0]}>
-        <ProceduralPSLV simFrame={simFrame} />
-        <ExhaustPlume simFrame={simFrame} />
+      {/* 2. Procedural PSLV-XL Staged Vehicle */}
+      <group ref={rocketGroupRef} position={[0, 20, 0]}>
+        <ProceduralPSLV simFrame={simFrame} mission={mission} />
+        <ExhaustPlume simFrame={simFrame} stages={mission?.stages} />
       </group>
+
+      {/* Atmospheric lighting */}
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[50, 100, 50]} intensity={1.8} castShadow />
+      <directionalLight position={[-30, 20, -30]} intensity={0.5} />
     </group>
   );
 }

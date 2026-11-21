@@ -1,22 +1,22 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Rocket, ShieldCheck, Database, Compass, RotateCcw } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from 'react';
+import { Rocket, ShieldCheck, Database, Compass, Orbit } from 'lucide-react';
 import {
-  SimulationEngine,
   PRESET_MISSIONS,
   DEFAULT_MISSION_ID,
   ChallengeModeModifiers,
+  SimulationEngine,
   SimulationState,
 } from './sim';
-import { deriveSimFrameState, CameraMode } from './components/scene';
 import { PreLaunchBrief } from './components/brief/PreLaunchBrief';
 import { LaunchView } from './components/launch/LaunchView';
 import { BhoonidhiExplorer } from './components/orbit/BhoonidhiExplorer';
+import { CameraMode, deriveSimFrameState } from './components/scene';
 import { ProvenanceModal } from './components/common/ProvenanceModal';
 
-export type ScreenMode = 'brief' | 'launch' | 'orbit';
+export type ScreenId = 'brief' | 'launch' | 'orbit';
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState<ScreenMode>('brief');
+  const [activeScreen, setActiveScreen] = useState<ScreenId>('brief');
   const [selectedMissionId, setSelectedMissionId] = useState<string>(DEFAULT_MISSION_ID);
   const [isProvenanceOpen, setIsProvenanceOpen] = useState<boolean>(false);
   const [challengeModifiers, setChallengeModifiers] = useState<ChallengeModeModifiers>({
@@ -28,16 +28,23 @@ export default function App() {
 
   const mission = PRESET_MISSIONS[selectedMissionId] || PRESET_MISSIONS[DEFAULT_MISSION_ID];
 
-  // Precompute full ascent trajectory from pure TypeScript simulation engine
+  // Wrap trajectory computation in useDeferredValue (Item D13)
+  const deferredModifiers = useDeferredValue(challengeModifiers);
   const trajectory = useMemo(() => {
-    const engine = new SimulationEngine(mission, challengeModifiers);
+    const engine = new SimulationEngine(mission, deferredModifiers);
     return engine.runSimulation();
-  }, [mission, challengeModifiers]);
+  }, [mission, deferredModifiers]);
 
   const [currentTime_s, setCurrentTime_s] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [timeWarp, setTimeWarp] = useState<number>(5);
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase');
+
+  // Reset currentTime_s to 0 and isPlaying to false when modifiers change (Item D13)
+  useEffect(() => {
+    setCurrentTime_s(0);
+    setIsPlaying(false);
+  }, [challengeModifiers]);
 
   const maxTime_s = trajectory.summary.cutoffTime_s;
   const animRef = useRef<number | null>(null);
@@ -96,8 +103,13 @@ export default function App() {
   }, [trajectory.states, currentTime_s]);
 
   const simFrame = useMemo(() => {
-    return deriveSimFrameState(currentState, mission.fairing.jettisonTime_s);
-  }, [currentState, mission.fairing.jettisonTime_s]);
+    return deriveSimFrameState(currentState, mission);
+  }, [currentState, mission]);
+
+  // Memoize ProvenanceModal onClose (Item D13)
+  const handleCloseProvenance = useCallback(() => {
+    setIsProvenanceOpen(false);
+  }, []);
 
   // Transition to Launchpad and start ascent playback
   const handleProceedToLaunch = () => {
@@ -108,7 +120,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#020617] text-slate-100 font-sans overflow-hidden select-none">
+    <div className="flex flex-col h-screen w-screen bg-[#020617] text-slate-100 font-sans overflow-hidden">
       {/* ======================================================== */}
       {/* TOP MISSION CONTROL NAVIGATION BAR                       */}
       {/* ======================================================== */}
@@ -147,18 +159,20 @@ export default function App() {
             <span className="hidden md:inline">1. Pre-Launch Brief</span>
             <span className="md:hidden">1. Brief</span>
           </button>
+
           <button
             onClick={() => setActiveScreen('launch')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-all ${
               activeScreen === 'launch'
-                ? 'bg-sky-500 text-white font-bold shadow-sm'
+                ? 'bg-orange-500 text-white font-bold shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Rocket className="w-3.5 h-3.5" />
+            <Orbit className="w-3.5 h-3.5" />
             <span className="hidden md:inline">2. 3D Launch &amp; Validation</span>
             <span className="md:hidden">2. Launch</span>
           </button>
+
           <button
             onClick={() => setActiveScreen('orbit')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-all ${
@@ -174,25 +188,11 @@ export default function App() {
         </nav>
 
         {/* Active Mission & Provenance Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-xs font-mono">
             <span className="text-slate-400">MISSION:</span>
             <span className="text-amber-400 font-semibold">{mission.variant}</span>
           </div>
-
-          <button
-            onClick={() => {
-              setCurrentTime_s(0);
-              setIsPlaying(false);
-              setCameraMode('pad');
-              setActiveScreen('brief');
-            }}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-mono bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors"
-            title="Reset simulation to T-0 Brief"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
 
           <button
             onClick={() => setIsProvenanceOpen(true)}
@@ -244,6 +244,7 @@ export default function App() {
 
         {activeScreen === 'orbit' && (
           <BhoonidhiExplorer
+            mission={mission}
             trajectory={trajectory}
             modifiers={challengeModifiers}
             onBackToBrief={() => setActiveScreen('brief')}
@@ -255,7 +256,7 @@ export default function App() {
       {/* Data Provenance & Scientific Honesty Modal */}
       <ProvenanceModal
         isOpen={isProvenanceOpen}
-        onClose={() => setIsProvenanceOpen(false)}
+        onClose={handleCloseProvenance}
       />
     </div>
   );

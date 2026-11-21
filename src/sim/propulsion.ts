@@ -2,6 +2,7 @@
  * Propulsion & Mass Dynamics for PSLV-XL
  * Strictly SI Units: Thrust in N, Mass in kg, Mass Flow in kg/s, Isp in s
  * Equation: T = m_dot * g0 * Isp
+ * Pure evaluation function (no side-effecting state mutations)
  */
 
 import { G0 } from './constants';
@@ -23,8 +24,6 @@ export class PropulsionSystem {
   private stages: StageDefinition[];
   private fairing: FairingDefinition;
   private payloadMass_kg: number;
-  private fairingJettisoned: boolean = false;
-  private triggeredEvents: Set<string> = new Set();
 
   constructor(
     stages: StageDefinition[],
@@ -52,10 +51,9 @@ export class PropulsionSystem {
   }
 
   /**
-   * Evaluates instantaneous vehicle mass, thrust, and mass flow at time t (seconds) and altitude (meters)
+   * Pure evaluation of instantaneous vehicle mass, thrust, and mass flow at time t and altitude
    */
   public evaluate(time_s: number, altitude_m: number): VehicleMassThrustState {
-    const events: string[] = [];
     const activeStageIds: string[] = [];
     const activeStageNames: string[] = [];
     const jettisonedStages: string[] = [];
@@ -67,18 +65,11 @@ export class PropulsionSystem {
     let totalMassFlow_kgs = 0;
     let totalMass_kg = this.payloadMass_kg;
 
-    // Check fairing jettison (by altitude ~115 km or by time)
-    if (!this.fairingJettisoned) {
-      if (altitude_m >= this.fairing.jettisonAltitude_m || time_s >= this.fairing.jettisonTime_s) {
-        this.fairingJettisoned = true;
-        const evt = 'Payload Fairing (Heat Shield) Separation';
-        if (!this.triggeredEvents.has(evt)) {
-          this.triggeredEvents.add(evt);
-          events.push(evt);
-        }
-      } else {
-        totalMass_kg += this.fairing.mass_kg;
-      }
+    // Pure fairing check (by altitude or by time)
+    const isFairingJettisoned =
+      altitude_m >= this.fairing.jettisonAltitude_m || time_s >= this.fairing.jettisonTime_s;
+    if (!isFairingJettisoned) {
+      totalMass_kg += this.fairing.mass_kg;
     }
 
     // Evaluate each stage component
@@ -86,11 +77,6 @@ export class PropulsionSystem {
       // Check if already staged / separated
       if (time_s >= stage.separationTime_s) {
         jettisonedStages.push(stage.id);
-        const evt = `${stage.name} Separation`;
-        if (!this.triggeredEvents.has(evt)) {
-          this.triggeredEvents.add(evt);
-          events.push(evt);
-        }
         continue; // Entire stage dry mass and any residual propellant dropped
       }
 
@@ -104,12 +90,6 @@ export class PropulsionSystem {
       if (isBurning) {
         activeStageIds.push(stage.id);
         activeStageNames.push(stage.name);
-
-        const ignEvt = `${stage.name} Ignition`;
-        if (!this.triggeredEvents.has(ignEvt)) {
-          this.triggeredEvents.add(ignEvt);
-          events.push(ignEvt);
-        }
 
         // Interpolate Isp between sea-level and vacuum
         const isp = stage.ispVacuum_s - (stage.ispVacuum_s - stage.ispSeaLevel_s) * rhoRatio;
@@ -130,15 +110,8 @@ export class PropulsionSystem {
       } else if (time_s < stage.ignitionTime_s) {
         // Not yet ignited, full propellant remains
         totalMass_kg += stage.count * stage.propellantMassPerUnit_kg;
-      } else {
-        // Burnout reached, but not yet separated (coasting stage)
-        const boEvt = `${stage.name} Burnout`;
-        if (!this.triggeredEvents.has(boEvt)) {
-          this.triggeredEvents.add(boEvt);
-          events.push(boEvt);
-        }
-        // Zero propellant remains, dry mass already counted
       }
+      // If burned out but not yet separated, zero propellant remains and dry mass is already added
     }
 
     return {
@@ -147,9 +120,9 @@ export class PropulsionSystem {
       totalMassFlow_kgs,
       activeStageIds,
       activeStageNames,
-      isFairingJettisoned: this.fairingJettisoned,
+      isFairingJettisoned,
       jettisonedStages,
-      events,
+      events: [],
     };
   }
 }

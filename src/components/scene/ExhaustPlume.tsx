@@ -2,12 +2,14 @@ import { useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
+import { StageDefinition } from '../../sim';
 
 interface Props {
   simFrame: SimFrameState;
+  stages?: StageDefinition[];
 }
 
-export function ExhaustPlume({ simFrame }: Props) {
+export function ExhaustPlume({ simFrame, stages }: Props) {
   const solidPlumeRef = useRef<THREE.Group>(null);
   const liquidPlumeRef = useRef<THREE.Group>(null);
   const padSmokeRef = useRef<THREE.Mesh>(null);
@@ -15,11 +17,27 @@ export function ExhaustPlume({ simFrame }: Props) {
   const t = simFrame.time_s;
   const isThrusting = simFrame.thrust_N > 1000;
 
-  // Determine active propulsion type:
-  // Solid stages: PS1 core (0-110s), Ground S12 (0-70s), Air S12 (25-92s), PS3 (264-376s)
-  // Liquid stages: PS2 Vikas (110-263s), PS4 twin (580-1030s)
-  const isLiquidActive = (t >= 110 && t < 263.2) || (t >= 580 && t < 1030 && !simFrame.isOrbitAchieved);
-  const isSolidActive = (t < 110) || (t >= 264 && t < 376.5);
+  const ps1 = stages?.find((s) => s.type === 'ps1_core');
+  const ps2 = stages?.find((s) => s.type === 'ps2');
+  const ps3 = stages?.find((s) => s.type === 'ps3');
+  const ps4 = stages?.find((s) => s.type === 'ps4');
+
+  const ps1BurnEnd = ps1 ? ps1.ignitionTime_s + ps1.burnDuration_s : 108.0;
+  const ps2Ign = ps2?.ignitionTime_s ?? 110.0;
+  const ps2BurnEnd = ps2 ? ps2.ignitionTime_s + ps2.burnDuration_s : 263.2;
+  const ps3Ign = ps3?.ignitionTime_s ?? 264.0;
+  const ps3BurnEnd = ps3 ? ps3.ignitionTime_s + ps3.burnDuration_s : 376.5;
+  const ps4Ign = ps4?.ignitionTime_s ?? 580.0;
+  const ps4BurnEnd = ps4 ? ps4.ignitionTime_s + ps4.burnDuration_s : 1029.0;
+
+  // Determine active propulsion type from mission stages
+  // Solid stages: PS1 / strap-ons (t < ps1BurnEnd) or PS3 (t >= ps3Ign && t < ps3BurnEnd)
+  const isSolidActive = (t < ps1BurnEnd) || (t >= ps3Ign && t < ps3BurnEnd);
+
+  // Liquid stages: PS2 Vikas or PS4 twin (gated on !simFrame.ps4Cutoff)
+  const isLiquidActive =
+    (t >= ps2Ign && t < ps2BurnEnd) ||
+    (t >= ps4Ign && t < ps4BurnEnd && !simFrame.ps4Cutoff);
 
   // Plume vacuum expansion factor (flares wider at high altitude)
   const vacExpansion = Math.min(2.5, 1.0 + simFrame.altitude_m / 60000.0);

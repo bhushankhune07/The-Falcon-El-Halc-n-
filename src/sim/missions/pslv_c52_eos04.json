@@ -203,13 +203,13 @@
       "astrodynamics": "WGS84 Ellipsoid & Vis-Viva Classical Orbital Mechanics"
     },
     "tags": {
-      "liftoffMass_320t": "REAL",
+      "liftoffMass_320t": "CALIBRATED",
       "eos04PayloadMass_1710kg": "REAL",
       "targetOrbit_529km_SSO": "REAL",
       "publishedMilestones": "REAL",
-      "bhoonidhiSarMetadata": "REAL",
-      "stagePropellantMasses": "REAL",
-      "stageThrustAndIsp": "REAL",
+      "bhoonidhiSarMetadata": "SYNTHETIC",
+      "stagePropellantMasses": "CALIBRATED",
+      "stageThrustAndIsp": "CALIBRATED",
       "stageInertMassBalance": "CALIBRATED",
       "autoGuidancePitchSchedule": "CALIBRATED",
       "exponentialAtmosphere": "CALIBRATED",

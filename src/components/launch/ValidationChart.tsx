@@ -1,85 +1,82 @@
 import { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   Line,
+  Scatter,
   XAxis,
   YAxis,
   Tooltip,
   Legend,
   ReferenceLine,
-  Scatter,
   CartesianGrid,
 } from 'recharts';
-import { TrajectoryResult, ISROMilestone } from '../../sim';
+import { TrajectoryResult, ISROMilestone, MissionConfig } from '../../sim';
 
 interface Props {
   trajectory: TrajectoryResult;
   currentTime_s: number;
   publishedMilestones: ISROMilestone[];
+  mission?: MissionConfig;
 }
 
 export function ValidationChart({
   trajectory,
   currentTime_s,
   publishedMilestones,
+  mission,
 }: Props) {
   const [metric, setMetric] = useState<'altitude' | 'velocity'>('altitude');
+  const missionName = mission?.name ?? trajectory.mission?.name ?? 'PSLV-C52 / EOS-04';
 
-  // Downsample states for Recharts high performance (every 10s gives ~100 points)
+  // Sample simulation trajectory states for high performance
   const chartData = useMemo(() => {
     const states = trajectory.states;
     const sampled: Array<{
       time_s: number;
-      simAltitude_km: number;
-      simVelocity_ms: number;
-      isroAltitude_km?: number;
-      isroVelocity_ms?: number;
-      eventLabel?: string;
+      simVal: number;
     }> = [];
-
-    // Map published milestones by nearest second
-    const milestoneMap = new Map<number, ISROMilestone>();
-    for (const m of publishedMilestones) {
-      milestoneMap.set(Math.round(m.time_s), m);
-    }
 
     for (let i = 0; i < states.length; i += 10) {
       const s = states[i];
       const t = Math.round(s.time_s);
-      const milestone = milestoneMap.get(t);
-
       sampled.push({
         time_s: t,
-        simAltitude_km: parseFloat((s.altitude_m / 1000.0).toFixed(1)),
-        simVelocity_ms: parseFloat(s.speed_ms.toFixed(0)),
-        isroAltitude_km: milestone?.expectedAltitude_km,
-        isroVelocity_ms: milestone?.expectedVelocity_ms,
-        eventLabel: milestone?.event,
+        simVal:
+          metric === 'altitude'
+            ? parseFloat((s.altitude_m / 1000.0).toFixed(1))
+            : parseFloat(s.speed_ms.toFixed(0)),
       });
     }
 
     // Always include final cutoff point
     const last = states[states.length - 1];
-    const lastMilestone = publishedMilestones[publishedMilestones.length - 1];
     sampled.push({
       time_s: Math.round(last.time_s),
-      simAltitude_km: parseFloat((last.altitude_m / 1000.0).toFixed(1)),
-      simVelocity_ms: parseFloat(last.speed_ms.toFixed(0)),
-      isroAltitude_km: lastMilestone?.expectedAltitude_km,
-      isroVelocity_ms: lastMilestone?.expectedVelocity_ms,
-      eventLabel: lastMilestone?.event,
+      simVal:
+        metric === 'altitude'
+          ? parseFloat((last.altitude_m / 1000.0).toFixed(1))
+          : parseFloat(last.speed_ms.toFixed(0)),
     });
 
     return sampled;
-  }, [trajectory.states, publishedMilestones]);
+  }, [trajectory.states, metric]);
+
+  // Published ISRO milestones as a separate Scatter dataset
+  const milestoneData = useMemo(() => {
+    return publishedMilestones.map((m) => ({
+      time_s: m.time_s,
+      isroVal: metric === 'altitude' ? m.expectedAltitude_km : m.expectedVelocity_ms,
+      event: m.event,
+      tolerancePct: m.tolerancePct ?? 5.0,
+    }));
+  }, [publishedMilestones, metric]);
 
   // Find the closest published milestone to current mission clock
   const currentMilestoneComparison = useMemo(() => {
     const comps = trajectory.summary.milestoneComparisons;
     if (!comps || comps.length === 0) return null;
 
-    // Milestone closest to currentTime_s
     let closest = comps[0];
     let minDiff = Math.abs(currentTime_s - closest.time_s);
 
@@ -93,16 +90,18 @@ export function ValidationChart({
     return closest;
   }, [trajectory.summary.milestoneComparisons, currentTime_s]);
 
+  const tolPct = currentMilestoneComparison?.tolerancePct ?? 5.0;
+
   return (
     <div className="flex flex-col h-full w-full bg-slate-900/60 rounded-xl border border-slate-800 p-4 shadow-xl">
       {/* Header & Metric Switcher */}
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-xs font-mono font-bold text-white tracking-wider">
-            MODEL VS. PUBLISHED ISRO MILESTONES
+          <h3 className="text-xs font-mono font-bold text-white tracking-wider uppercase">
+            {missionName} — FIT RESIDUALS (CALIBRATED TO THESE POINTS)
           </h3>
           <p className="text-[10px] font-mono text-slate-400">
-            PSLV-C52 Golden Run Calibration Check
+            Model checkpoints calibrated to published ISRO sequence of events
           </p>
         </div>
 
@@ -131,7 +130,7 @@ export function ValidationChart({
         </div>
       </div>
 
-      {/* Live Active Milestone Accuracy Badge */}
+      {/* Live Active Milestone Fit Residual Badge */}
       {currentMilestoneComparison ? (
         <div className="mb-3 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-2">
@@ -145,43 +144,45 @@ export function ValidationChart({
           <div className="flex items-center gap-2">
             <span
               className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                Math.abs(currentMilestoneComparison.altitudeErrorPct) <= 5.0
+                Math.abs(currentMilestoneComparison.altitudeErrorPct) <= tolPct
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : 'bg-red-500/20 text-red-400 border border-red-500/30'
               }`}
             >
-              Alt Err: {currentMilestoneComparison.altitudeErrorPct > 0 ? '+' : ''}
+              Alt Residual: {currentMilestoneComparison.altitudeErrorPct > 0 ? '+' : ''}
               {currentMilestoneComparison.altitudeErrorPct.toFixed(2)}%
             </span>
             <span
               className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                Math.abs(currentMilestoneComparison.velocityErrorPct) <= 5.0
+                Math.abs(currentMilestoneComparison.velocityErrorPct) <= tolPct
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : 'bg-red-500/20 text-red-400 border border-red-500/30'
               }`}
             >
-              Vel Err: {currentMilestoneComparison.velocityErrorPct > 0 ? '+' : ''}
+              Vel Residual: {currentMilestoneComparison.velocityErrorPct > 0 ? '+' : ''}
               {currentMilestoneComparison.velocityErrorPct.toFixed(2)}%
             </span>
           </div>
         </div>
       ) : null}
 
-      {/* Recharts Chart Area */}
+      {/* Recharts ComposedChart Area (Item C9) */}
       <div className="flex-1 w-full min-h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis
               dataKey="time_s"
+              type="number"
+              domain={[0, 'dataMax']}
               stroke="#64748b"
               fontSize={10}
               tickFormatter={(v) => `T+${v}s`}
             />
             <YAxis
+              domain={[0, 'auto']}
               stroke="#64748b"
               fontSize={10}
-              domain={metric === 'altitude' ? [0, 600] : [0, 8500]}
               tickFormatter={(v) => (metric === 'altitude' ? `${v}k` : `${v}`)}
             />
             <Tooltip
@@ -214,42 +215,26 @@ export function ValidationChart({
               }}
             />
 
-            {metric === 'altitude' ? (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="simAltitude_km"
-                  name="Simulated RK4 Alt (km)"
-                  stroke="#f59e0b"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-                <Scatter
-                  dataKey="isroAltitude_km"
-                  name="Published ISRO Target"
-                  fill="#06b6d4"
-                  shape="circle"
-                />
-              </>
-            ) : (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="simVelocity_ms"
-                  name="Simulated Velocity (m/s)"
-                  stroke="#38bdf8"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-                <Scatter
-                  dataKey="isroVelocity_ms"
-                  name="Published ISRO Target"
-                  fill="#10b981"
-                  shape="circle"
-                />
-              </>
-            )}
-          </LineChart>
+            {/* Continuous Simulated Curve */}
+            <Line
+              type="monotone"
+              dataKey="simVal"
+              name={metric === 'altitude' ? 'Simulated RK4 Alt (km)' : 'Simulated Velocity (m/s)'}
+              stroke={metric === 'altitude' ? '#f59e0b' : '#38bdf8'}
+              strokeWidth={2.5}
+              dot={false}
+              isAnimationActive={false}
+            />
+
+            {/* Discrete Published ISRO Milestones as Separate Scatter Series */}
+            <Scatter
+              data={milestoneData}
+              dataKey="isroVal"
+              name="Published ISRO Target"
+              fill="#06b6d4"
+              shape="circle"
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>

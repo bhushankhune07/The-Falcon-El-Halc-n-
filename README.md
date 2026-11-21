@@ -3,7 +3,6 @@
 > *Developed for the ASTRA 2026 Hackathon*
 
 [![Vitest Automated Physics Suite](https://img.shields.io/badge/Vitest-11%2F11%20Passed-emerald.svg)](#physics-engine--validation-results)
-[![Accuracy vs ISRO](https://img.shields.io/badge/ISRO%20Cutoff%20Accuracy-%C2%B10.2%25-blue.svg)](#pslv-c52--eos-04-golden-run-validation-table)
 [![Static Deployment](https://img.shields.io/badge/Deployment-100%25%20Static%20Vercel-orange.svg)](#zero-backend--zero-secret-architecture)
 [![3D Engine](https://img.shields.io/badge/Three.js-100%25%20Procedural-purple.svg)](#100-procedural-3d-scenes-two-scene-architecture)
 
@@ -13,29 +12,29 @@
 
 **BharatLaunch 3D** simulates an ISRO polar satellite launch from **T-0 liftoff at Satish Dhawan Space Centre (SDSC SHAR), Sriharikota** to **first pixel orbital imaging** by the EOS-04 C-band Synthetic Aperture Radar (SAR) satellite.
 
-Built with **React, Vite, TypeScript, Tailwind CSS, Three.js (@react-three/fiber), Leaflet, Recharts, and Vitest**, the application bridges high-fidelity numerical astrodynamics with interactive web visualization and open Earth Observation data science.
+Built with **React, Vite, TypeScript, Tailwind CSS, Three.js (@react-three/fiber), Leaflet, Recharts, and Vitest**, the application bridges numerical astrodynamics with interactive web visualization and open Earth Observation data science.
 
 ### ASTRA 2026 Domain Alignment
 * **Domain 01: Space Mission Simulation & Astrodynamics**
   - High-precision 4th-Order Runge-Kutta (RK4, $\Delta t = 0.05\text{ s}$) planar ascent physics engine.
   - Consistent propellant mass depletion ($T = \dot{m} \cdot g_0 \cdot I_{sp}$).
-  - US62/ISA Mach-dependent aerodynamic drag curve $C_d(M)$ and exponential atmosphere $\rho(h) = 1.225 \cdot \exp(-h / 7500)$.
+  - Piecewise Mach-dependent Cd, hand-built aerodynamic drag curve $C_d(M)$ and exponential atmosphere $\rho(h) = 1.225 \cdot \exp(-h / 7500)$.
   - Sriharikota Earth rotation velocity boost ($v_0 = \omega_E R \cos(13.72^\circ) \sin(\text{Az}) \approx 452\text{ m/s}$).
   - Closed-loop Auto-Guidance attitude program for circularization into target Sun-Synchronous Orbit (SSO).
   - Instantaneous vis-viva Keplerian orbital element calculation (semi-major axis, perigee, apogee, eccentricity).
 * **Domain 02: Earth Observation & Satellite Data Integration**
-  - Live data explorer for NRSC Bhoonidhi EOS-04 C-band SAR products.
-  - Authentic Level-2 GeoTIFF (Terrain Geo-Referenced) and Level-1B (Ground Range) metadata schema.
+  - Data explorer for NRSC Bhoonidhi EOS-04 C-band SAR products.
+  - Level-2 GeoTIFF (Terrain Geo-Referenced) metadata schema.
   - Krishna-Godavari agricultural river basin bounding box visualization on Leaflet.
-  - Scientific explanations of active microwave C-band (5.35 GHz) day/night, all-weather penetration for crop phenology and flood inundation disaster mapping.
+  - Scientific explanations of active microwave C-band (5.35 GHz) day/night imaging for crop phenology and flood inundation disaster mapping.
 
 ---
 
-## 🎯 PSLV-C52 / EOS-04 Golden Run Validation Table
+## 🎯 PSLV-C52 / EOS-04 Golden Run Fit Residuals (Calibrated to These Points)
 
 All inert stage masses, propellant loads, and guidance pitch schedules were calibrated against published ISRO documentation. The automated unit test suite verifies that simulated cutoff altitude and velocity match ISRO's published PSLV-C52 brochure milestones within **$\pm 5\%$**:
 
-| Sequence Milestone | ISRO Brochure Published Target | Simulated Golden Run | Error (%) | Vitest Status |
+| Sequence Milestone | ISRO Brochure Published Target | Simulated Golden Run | Fit Residual (%) | Vitest Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Ground S12 Strap-ons Sep (T+69.9s)** | 24.5 km / 1,400 m/s | 24.5 km / 1,428 m/s | **+0.01% / +2.03%** | ✅ PASS |
 | **Air-lit S12 Strap-ons Sep (T+92.0s)** | 41.0 km / 1,890 m/s | 40.8 km / 1,909 m/s | **-0.49% / +1.02%** | ✅ PASS |
@@ -48,8 +47,6 @@ All inert stage masses, propellant loads, and guidance pitch schedules were cali
 | **Final Orbit Perigee** | > 450 km | **520.3 km** | — | ✅ PASS |
 | **Final Orbit Apogee** | Target ~529–580 km | **581.1 km** | — | ✅ PASS |
 | **Orbit Eccentricity** | < 0.15 (near circular) | **0.0044** | — | ✅ PASS |
-| **Max Dynamic Pressure (Max-Q)** | Solid launch loads | **79.4 kPa @ T+49.5s** | — | ✅ PASS |
-| **Peak Sensed G-Force** | Typical PSLV ascent | **4.61 G @ T+262s** | — | ✅ PASS |
 
 ---
 
@@ -98,7 +95,7 @@ flowchart TD
   * `pslv_c57_aditya_l1.json` (Aditya-L1 Earth Parking-Orbit phase).
 
 ### 2. 100% Procedural 3D Scenes (Two-Scene Architecture)
-- **Zero external `.glb/.gltf` model files** and **zero external image URLs** (eliminating CORS and network failures).
+- **Zero external `.glb/.gltf` model files** (eliminating CORS and network failures).
 - **Scene A — Floating-Origin Ascent Scene (0–120 km)**:
   * Eliminates 32-bit floating-point jitter by pinning the rocket near world origin while the launchpad, Sriharikota coastline, and atmospheric sky dome recede.
   * Procedural PSLV-XL: S12 strap-on radial separation, PS1/PS2/PS3 staging, clamshell fairing separation, and dynamic throttle-scaled exhaust plumes.
@@ -111,14 +108,14 @@ flowchart TD
 - Mode toggle: **Auto-Guidance (Golden Run)** vs. **Challenge Mode** (sliders for Payload Mass Delta, Pitch Kick Bias, and synthetic Wind Scenarios).
 - OpenStreetMap Leaflet map displaying SDSC Sriharikota launchpad, computed downrange ground track, and indicative booster splashdown hazard corridors in the Bay of Bengal.
 
-### 4. Screen 2: 3D Launch & Live Validation
-- Split mission control viewport: Left 3D Canvas + Right Live Telemetry Sidebar.
-- Recharts overlay comparing simulated Altitude & Velocity curves against published ISRO milestones with live `% Error` badges.
+### 4. Screen 2: 3D Launch & Fit Residuals Telemetry
+- Split mission control viewport: Left 3D Canvas + Right Telemetry Sidebar.
+- Recharts overlay comparing simulated Altitude & Velocity curves against published ISRO milestones with fit residual error badges.
 - Flight loads monitoring: continuous dynamic pressure (Max-Q) and sensed acceleration in G's.
 
 ### 5. Screen 3: Orbit & Bhoonidhi SAR Data Explorer
-- Real-time Orbit Insertion verdict banner (Pass/Fail diagnosis of gravity drag and propellant margins).
-- NRSC Bhoonidhi metadata product viewer (**MRS**, **Level-2 GeoTIFF / Level-1B Ground Range**, Dual-Pol HH+HV, 25m resolution, 115 km swath).
+- Real-time Orbit Insertion verdict banner (Pass/Fail diagnosis of gravity drag and propellant margins for EOS-04).
+- NRSC Bhoonidhi metadata product viewer (**MRS**, **Level-2 GeoTIFF**, Dual-Pol HH+HV, 25m resolution, 115 km swath).
 - Leaflet scene bounding box over the Krishna-Godavari agricultural belt and procedural C-band SAR backscatter visual simulation.
 
 ---
@@ -149,7 +146,7 @@ npm install
 
 ### Running the Automated Physics Test Suite
 ```bash
-# Run Vitest test suite (verifies PSLV-C52 Golden Run ±5% accuracy and preset missions)
+# Run Vitest test suite (verifies PSLV-C52 Golden Run fit residuals within ±5% and preset missions)
 npm test
 ```
 
@@ -172,16 +169,16 @@ Generates production-optimized static bundle in `/dist`.
 Every displayed metric and asset is classified under our transparent three-tier badge scheme:
 
 * **REAL (ISRO / NRSC Published Data)**:
-  - PSLV-C52 / EOS-04 gross liftoff mass (~320 t) and stage propellant specs.
+  - PSLV-C52 / EOS-04 liftoff mass (276.6 t sim-computed GLOW) and stage propellant specs.
   - Published sequence-of-events milestone checkpoints.
   - Target Sun-Synchronous Orbit parameters (529 km, 97.6° inclination).
   - NRSC Bhoonidhi C-SAR MRS metadata schema fields.
 * **CALIBRATED (Model-Derived)**:
   - Closed-loop Auto-Guidance pitch schedule and terminal insertion law.
   - Stage inert mass balance and PS4 effective thrust ($9,500\text{ N}$) tuned to match ISRO cutoff altitude ($533.6\text{ km}$, $-0.07\%$) and velocity ($7,603\text{ m/s}$, $+0.18\%$).
-  - Exponential atmospheric density profile $\rho(h) = 1.225 \cdot \exp(-h / 7500)$ and US62 Mach-dependent drag curve.
+  - Exponential atmospheric density profile $\rho(h) = 1.225 \cdot \exp(-h / 7500)$ and piecewise Mach-dependent Cd, hand-built drag curve.
 * **SYNTHETIC (Model Output & Visuals)**:
-  - Challenge Mode wind perturbation presets (*explicitly synthetic scenarios, not live MOSDAC data*).
+  - Challenge Mode wind perturbation presets (*explicitly synthetic scenarios, not MOSDAC data*).
   - Computed Bay of Bengal booster splashdown hazard corridors (*indicative model output, not official range safety hazard areas*).
   - Continuous Max-Q and Sensed G-force curves (*derived from RK4 equations; not published in mission brochure*).
   - Procedural 3D geometries, particle plumes, and SAR backscatter preview canvas.
@@ -189,7 +186,7 @@ Every displayed metric and asset is classified under our transparent three-tier 
 ### Model Simplifications
 1. **2D Planar Ascent**: Motion is integrated in a 2D launch plane along Sriharikota's 140° azimuth. The coastal dogleg maneuver performed around Sri Lanka to prevent land overflight is not modelled.
 2. **Exponential Atmosphere**: A single scale height ($H = 7500\text{ m}$) represents the atmospheric density without thermospheric seasonal variations.
-3. **Map Tiles**: OpenStreetMap tiles are used in place of ISRO Bhuvan tiles to avoid dynamic token expiration and CORS errors during hackathon judging.
+3. **Map Tiles**: OpenStreetMap tiles are used in place of ISRO Bhuvan tiles to avoid dynamic token expiration and CORS errors during hackathon judging (requires active internet access).
 
 ---
 

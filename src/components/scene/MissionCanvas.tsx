@@ -5,15 +5,18 @@ import { SimFrameState, CameraMode } from './types';
 import { SceneErrorBoundary } from './ErrorBoundary';
 import { AscentScene } from './AscentScene';
 import { OrbitScene } from './OrbitScene';
+import { MissionConfig } from '../../sim';
 
 interface Props {
   simFrame: SimFrameState;
+  mission?: MissionConfig;
   cameraMode?: CameraMode;
   onCameraModeChange?: (mode: CameraMode) => void;
 }
 
 export function MissionCanvas({
   simFrame,
+  mission,
   cameraMode = 'chase',
   onCameraModeChange,
 }: Props) {
@@ -63,11 +66,12 @@ export function MissionCanvas({
             position: cameraMode === 'orbit' ? [0, 80, 130] : [-18, 16, 36],
             fov: 45,
             near: 0.1,
-            far: 5000,
+            far: 400000,
           }}
         >
-          {/* Controls: Enable OrbitControls in all modes with smooth damping */}
+          {/* Controls: Enable OrbitControls ONLY when cameraMode === 'orbit' (Item D10) */}
           <OrbitControls
+            enabled={cameraMode === 'orbit'}
             enableDamping
             dampingFactor={0.05}
             maxDistance={cameraMode === 'orbit' ? 400 : 150}
@@ -80,7 +84,7 @@ export function MissionCanvas({
           {/* ======================================================== */}
           {isAscentVisible ? (
             <group visible={ascentOpacity > 0.01}>
-              <AscentScene simFrame={simFrame} cameraMode={cameraMode} />
+              <AscentScene simFrame={simFrame} cameraMode={cameraMode} mission={mission} />
             </group>
           ) : null}
 
@@ -89,7 +93,7 @@ export function MissionCanvas({
           {/* ======================================================== */}
           {isOrbitVisible ? (
             <group visible={orbitOpacity > 0.01}>
-              <OrbitScene simFrame={simFrame} />
+              <OrbitScene simFrame={simFrame} targetOrbit={mission?.targetOrbit} />
             </group>
           ) : null}
         </Canvas>
@@ -107,44 +111,39 @@ export function MissionCanvas({
         </div>
       ) : null}
 
-      {/* ======================================================== */}
-      {/* CAMERA MODE SELECTOR PILLS (FLOATING ON CANVAS)          */}
-      {/* ======================================================== */}
-      {onCameraModeChange ? (
-        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 p-1 bg-slate-900/85 backdrop-blur-md border border-slate-700/60 rounded-lg shadow-lg">
-          <button
-            onClick={() => onCameraModeChange('pad')}
-            disabled={altKm > 70}
-            className={`px-3 py-1.5 rounded text-xs font-mono font-medium transition-all ${
-              cameraMode === 'pad'
-                ? 'bg-orange-500 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:hover:text-slate-400'
-            }`}
-          >
-            Pad View
-          </button>
-          <button
-            onClick={() => onCameraModeChange('chase')}
-            className={`px-3 py-1.5 rounded text-xs font-mono font-medium transition-all ${
-              cameraMode === 'chase'
-                ? 'bg-sky-500 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Chase Cam
-          </button>
-          <button
-            onClick={() => onCameraModeChange('orbit')}
-            className={`px-3 py-1.5 rounded text-xs font-mono font-medium transition-all ${
-              cameraMode === 'orbit'
-                ? 'bg-emerald-500 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Orbit View
-          </button>
-        </div>
-      ) : null}
+      {/* Camera Mode Selector Pill (Bottom-Left) */}
+      <div className="absolute bottom-4 left-4 z-10 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 text-xs font-mono shadow-xl">
+        <button
+          onClick={() => onCameraModeChange && onCameraModeChange('pad')}
+          className={`px-3 py-1 rounded transition-colors ${
+            cameraMode === 'pad'
+              ? 'bg-orange-500 text-white font-bold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Pad View
+        </button>
+        <button
+          onClick={() => onCameraModeChange && onCameraModeChange('chase')}
+          className={`px-3 py-1 rounded transition-colors ${
+            cameraMode === 'chase'
+              ? 'bg-orange-500 text-white font-bold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Chase View
+        </button>
+        <button
+          onClick={() => onCameraModeChange && onCameraModeChange('orbit')}
+          className={`px-3 py-1 rounded transition-colors ${
+            cameraMode === 'orbit'
+              ? 'bg-sky-500 text-white font-bold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          Orbit View
+        </button>
+      </div>
     </div>
   );
 }

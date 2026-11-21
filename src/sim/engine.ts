@@ -35,7 +35,8 @@ export class SimulationEngine {
       this.modifiers
     );
 
-    const guidance = new GuidanceProgram(this.mission.pitchSchedule, this.modifiers);
+    const targetAlt_m = this.mission.targetOrbit.altitude_km * 1000.0;
+    const guidance = new GuidanceProgram(this.mission.pitchSchedule, this.modifiers, targetAlt_m);
     const integrator = new RK4Integrator(
       propulsion,
       guidance,
@@ -58,6 +59,9 @@ export class SimulationEngine {
     let stepCount = 0;
 
     const sampledStates: SimulationState[] = [];
+    const triggeredEvents = new Set<string>();
+    let pendingEvents: string[] = [];
+
     let maxQ_kPa = 0;
     let maxQTime_s = 0;
     let maxG = 0;
@@ -69,6 +73,40 @@ export class SimulationEngine {
     while (t <= cutoffTime_s) {
       // Step RK4
       const { nextState, info } = integrator.step(t, state, SIM_DT);
+
+      const r = Math.sqrt(state.x * state.x + state.y * state.y);
+      const alt_m = Math.max(0, r - 6.378137e6);
+
+      // Fairing jettison event check on threshold crossing
+      if (
+        !triggeredEvents.has('fairing') &&
+        (alt_m >= this.mission.fairing.jettisonAltitude_m || t >= this.mission.fairing.jettisonTime_s)
+      ) {
+        triggeredEvents.add('fairing');
+        pendingEvents.push('Payload Fairing (Heat Shield) Separation');
+      }
+
+      // Stage events check on threshold crossings
+      for (const stage of this.mission.stages) {
+        const ignKey = `${stage.id}_ign`;
+        if (!triggeredEvents.has(ignKey) && t >= stage.ignitionTime_s) {
+          triggeredEvents.add(ignKey);
+          pendingEvents.push(`${stage.name} Ignition`);
+        }
+
+        const boKey = `${stage.id}_bo`;
+        const burnEnd = stage.ignitionTime_s + stage.burnDuration_s;
+        if (!triggeredEvents.has(boKey) && t >= burnEnd) {
+          triggeredEvents.add(boKey);
+          pendingEvents.push(`${stage.name} Burnout`);
+        }
+
+        const sepKey = `${stage.id}_sep`;
+        if (!triggeredEvents.has(sepKey) && t >= stage.separationTime_s) {
+          triggeredEvents.add(sepKey);
+          pendingEvents.push(`${stage.name} Separation`);
+        }
+      }
 
       // Track Max-Q and Max-G
       if (info.dynamicPressure_kPa > maxQ_kPa) {
@@ -82,14 +120,13 @@ export class SimulationEngine {
 
       // Sample at 1 Hz for UI charts and telemetry
       if (t >= nextSampleTime || t >= cutoffTime_s - SIM_DT) {
-        const simState = integrator.toSimulationState(t, state, info);
+        const simState = integrator.toSimulationState(t, state, info, pendingEvents);
         sampledStates.push(simState);
+        pendingEvents = [];
         nextSampleTime += sampleInterval_s;
       }
 
       // Ground impact safety check
-      const r = Math.sqrt(state.x * state.x + state.y * state.y);
-      const alt_m = r - 6.378137e6;
       if (t > 15.0 && alt_m <= 0) {
         // Rocket crashed
         break;
@@ -102,7 +139,7 @@ export class SimulationEngine {
 
     // Final evaluation at cutoff
     const finalInfo = integrator.evaluateDerivatives(t, state);
-    const finalState = integrator.toSimulationState(t, state, finalInfo);
+    const finalState = integrator.toSimulationState(t, state, finalInfo, pendingEvents);
 
     // Ensure final state is recorded
     if (sampledStates.length === 0 || sampledStates[sampledStates.length - 1].time_s < t - 0.5) {
@@ -141,6 +178,7 @@ export class SimulationEngine {
         targetVelocity_ms: milestone.expectedVelocity_ms,
         actualVelocity_ms: Math.round(actualVel_ms),
         velocityErrorPct: Math.round(velErrPct * 100) / 100,
+        tolerancePct: tolPct,
         passed,
       });
     }
@@ -150,10 +188,10 @@ export class SimulationEngine {
     const finalAlt = finalState.altitude_m / 1000.0;
     const finalVel = finalState.speed_ms;
 
-    // Orbit success criteria:
-    // Positive perigee above dense atmosphere (> 450 km) and within range of target altitude
+    // Mission-derived orbital insertion threshold (positive perigee > Math.max(150, 0.85 * targetAlt))
     const targetAlt = this.mission.targetOrbit.altitude_km;
-    const orbitAchieved = finalPerigee > 450.0 && Math.abs(finalAlt - targetAlt) / targetAlt < 0.10;
+    const minPerigee = Math.max(150, 0.85 * targetAlt);
+    const orbitAchieved = finalPerigee > minPerigee && Math.abs(finalAlt - targetAlt) / targetAlt < 0.10;
 
     return {
       mission: this.mission,

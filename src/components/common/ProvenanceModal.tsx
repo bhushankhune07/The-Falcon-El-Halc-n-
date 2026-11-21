@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X, ShieldCheck, CheckCircle2, Sliders, Info, Heart } from 'lucide-react';
 
 interface Props {
@@ -7,6 +7,21 @@ interface Props {
 }
 
 export function ProvenanceModal({ isOpen, onClose }: Props) {
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
+
+  // Focus management: focus close button on open and restore focus on close
+  useEffect(() => {
+    if (isOpen) {
+      prevFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => {
+        closeBtnRef.current?.focus();
+      }, 0);
+    } else if (prevFocusRef.current) {
+      prevFocusRef.current.focus();
+    }
+  }, [isOpen]);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -22,8 +37,11 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="provenance-modal-title"
     >
       <div
         className="relative w-full max-w-4xl max-h-[90vh] bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
@@ -38,7 +56,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2 id="provenance-modal-title" className="text-base font-bold text-white flex items-center gap-2">
                 Data Provenance, Assumptions &amp; Credits
               </h2>
               <p className="text-xs text-slate-400 font-mono">
@@ -48,7 +66,9 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
           </div>
 
           <button
+            ref={closeBtnRef}
             onClick={onClose}
+            aria-label="Close dialog"
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
             title="Close (Esc)"
           >
@@ -95,7 +115,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                   <li>EOS-04 payload mass (1,710 kg / 1,736 kg total)</li>
                   <li>Published sequence-of-events milestones (T+70s, T+92s, T+110s, T+177s, T+263s, T+478s, T+1030s)</li>
                   <li>Target Orbit: 529 km, 97.6° SSO</li>
-                  <li>Bhoonidhi C-band SAR MRS/CRS Level-2 GeoTIFF schema</li>
+                  <li>Bhoonidhi C-band SAR MRS Level-2 GeoTIFF schema</li>
                 </ul>
               </div>
 
@@ -108,13 +128,13 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Aerodynamic and trajectory parameters balanced through numerical tuning to match published milestones within ±5%.
+                  Aerodynamic and trajectory parameters balanced through numerical tuning to match published milestones within ±5%. C52 stage loads/thrust are tuned to match milestones and differ from nominal PSLV-XL values; JSON thrust fields are unused (thrust = m_dot * g0 * Isp).
                 </p>
                 <ul className="space-y-1 text-[11px] font-mono text-slate-300 list-disc list-inside">
                   <li>Auto-Guidance Hermite pitch schedule</li>
-                  <li>Stage inert mass balance (~315–320 t liftoff)</li>
+                  <li>Stage inert mass balance (276.6 t sim-computed GLOW)</li>
                   <li>PS4 effective thrust (9,500 N, calibrated to 533.6 km cutoff)</li>
-                  <li>US62/ISA Mach-dependent drag curve Cd(Mach)</li>
+                  <li>Piecewise Mach-dependent Cd, hand-built</li>
                   <li>Exponential atmosphere scale height (7,500 m)</li>
                 </ul>
               </div>
@@ -133,7 +153,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                 <ul className="space-y-1 text-[11px] font-mono text-slate-300 list-disc list-inside">
                   <li>Challenge Mode wind profiles (NOT live MOSDAC data)</li>
                   <li>Downrange booster splashdown corridor polygons</li>
-                  <li>Continuous Max-Q (79.4 kPa) &amp; Sensed G-force curves</li>
+                  <li>Continuous Max-Q &amp; Sensed G-force curves</li>
                   <li>Procedural 3D PSLV mesh, plumes &amp; SAR backscatter</li>
                 </ul>
               </div>
@@ -170,7 +190,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-none mt-0.5" />
                 <div>
                   <strong className="text-white">Map Tile Provider (OpenStreetMap): </strong>
-                  ISRO Bhuvan tile services require dynamic token authentication that is prone to CORS and rate-limiting blocks in static frontend environments. OpenStreetMap tiles are used to guarantee 100% offline and browser reliability.
+                  ISRO Bhuvan tile services require dynamic token authentication that is prone to CORS and rate-limiting blocks in static frontend environments. OpenStreetMap tiles are used for the downrange map; tile rendering requires an active internet connection.
                 </div>
               </div>
 
@@ -178,7 +198,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                 <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-none mt-0.5" />
                 <div>
                   <strong className="text-white">Closed-Loop Auto-Guidance Law: </strong>
-                  A PD attitude trim controller acts on PS4 flight path angle (&gamma; &rarr; 0&deg;) during terminal orbital insertion (t &ge; 750s) to guarantee positive perigee &gt; 450 km.
+                  Proportional vertical-rate trim toward the mission target altitude during t &ge; 750 s; no guarantee of orbit.
                 </div>
               </div>
             </div>

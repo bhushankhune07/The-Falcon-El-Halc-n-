@@ -1,32 +1,47 @@
 import { Flame, Gauge, CheckCircle, Clock } from 'lucide-react';
-import { TrajectoryResult, ISROMilestone, SimulationState } from '../../sim';
+import { TrajectoryResult, ISROMilestone, SimulationState, MissionConfig } from '../../sim';
 import { ValidationChart } from './ValidationChart';
 
 interface Props {
   trajectory: TrajectoryResult;
   currentState: SimulationState;
+  mission: MissionConfig;
   publishedMilestones: ISROMilestone[];
 }
 
 export function TelemetrySidebar({
   trajectory,
   currentState,
+  mission,
   publishedMilestones,
 }: Props) {
   const { summary } = trajectory;
   const t = currentState.time_s;
+  const isGoldenRun = mission.id === 'pslv-c52-eos04';
 
   return (
     <div className="flex flex-col h-full w-full gap-4 overflow-y-auto pr-1">
       {/* ======================================================== */}
-      {/* 1. VALIDATION CHART (MODEL VS ISRO)                      */}
+      {/* 1. FIT RESIDUALS CHART (PSLV-C52 ONLY; HIDDEN FOR C25/C57) */}
       {/* ======================================================== */}
       <div className="flex-none h-[300px]">
-        <ValidationChart
-          trajectory={trajectory}
-          currentTime_s={t}
-          publishedMilestones={publishedMilestones}
-        />
+        {isGoldenRun ? (
+          <ValidationChart
+            trajectory={trajectory}
+            currentTime_s={t}
+            mission={mission}
+            publishedMilestones={publishedMilestones}
+          />
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center p-6 rounded-xl bg-slate-900/60 border border-amber-500/30 text-center space-y-2.5">
+            <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              EXPERIMENTAL — launch-phase model, not validated vs ISRO
+            </span>
+            <p className="text-xs font-mono text-slate-400 max-w-xs leading-relaxed">
+              Model fit residuals and milestone comparison scatter series are available for PSLV-C52 Golden Run only.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ======================================================== */}

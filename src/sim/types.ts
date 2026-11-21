@@ -149,6 +149,7 @@ export interface MilestoneComparison {
   targetVelocity_ms: number;
   actualVelocity_ms: number;
   velocityErrorPct: number;
+  tolerancePct?: number;
   passed: boolean;
 }
 
