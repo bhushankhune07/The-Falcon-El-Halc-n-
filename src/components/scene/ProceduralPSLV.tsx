@@ -62,6 +62,14 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
   const dtPS2 = Math.max(0, t - ps2Sep);
   const dtPS3 = Math.max(0, t - ps3Sep);
 
+  // Transonic vapor cone (Prandtl-Glauert singularity) around fairing shoulder
+  const soundSpeed = simFrame.altitude_m < 11000 ? 340 - (simFrame.altitude_m / 11000) * 45 : 295;
+  const approxMach = simFrame.speed_ms / soundSpeed;
+  const vaporConeOpacity =
+    !simFrame.fairingSeparated && approxMach >= 0.90 && approxMach <= 1.15 && simFrame.altitude_m < 20000
+      ? Math.max(0, 1.0 - Math.abs(approxMach - 1.02) / 0.13) * 0.72
+      : 0;
+
   // Smooth deployment of satellite solar panels and SAR antenna gated on ps4Cutoff
   useFrame((_, delta) => {
     if (simFrame.fairingSeparated) {
@@ -346,6 +354,35 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
       </group>
 
       {/* ======================================================== */}
+      {/* PRANDTL-GLAUERT TRANSONIC CONDENSATION VAPOR CONE        */}
+      {/* Dynamic collar visible during transonic buffeting        */}
+      {/* ======================================================== */}
+      {vaporConeOpacity > 0.01 ? (
+        <group position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8 + fairingHeight * 0.65, 0]}>
+          <mesh>
+            <coneGeometry args={[coreRadius * 1.55, 2.2, 32, 1, true]} />
+            <meshBasicMaterial
+              color="#ffffff"
+              transparent
+              opacity={vaporConeOpacity}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+          <mesh position={[0, -0.6, 0]}>
+            <cylinderGeometry args={[coreRadius * 1.45, coreRadius * 1.1, 1.2, 32, 1, true]} />
+            <meshBasicMaterial
+              color="#e0f2fe"
+              transparent
+              opacity={vaporConeOpacity * 0.65}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
+      ) : null}
+
+      {/* ======================================================== */}
       {/* 2-HALF CLAMSHELL PAYLOAD FAIRING (HEAT SHIELD) */}
       {/* ======================================================== */}
       {/* Left Fairing Half */}
@@ -354,19 +391,34 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
           ref={fairingLeftRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
         >
-          {/* Cylinder Half */}
+          {/* Outer Shell Cylinder Half */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>
             <cylinderGeometry
               args={[coreRadius + 0.1, coreRadius + 0.1, fairingHeight * 0.7, 32, 1, false, 0, Math.PI]}
             />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
           </mesh>
-          {/* Conical Ogive Nosecone Half */}
+          {/* Inner Acoustic Soundproofing Foam Layer */}
+          <mesh position={[0, fairingHeight * 0.35, 0]}>
+            <cylinderGeometry
+              args={[coreRadius + 0.07, coreRadius + 0.07, fairingHeight * 0.68, 32, 1, false, 0.04, Math.PI - 0.08]}
+            />
+            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Outer Shell Conical Ogive Nosecone Half */}
           <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>
             <coneGeometry
               args={[coreRadius + 0.1, fairingHeight * 0.3, 32, 1, false, 0, Math.PI]}
             />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Inner Nosecone Acoustic Layer */}
+          <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>
+            <coneGeometry
+              args={[coreRadius + 0.07, fairingHeight * 0.28, 32, 1, false, 0.04, Math.PI - 0.08]}
+            />
+            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
           </mesh>
         </group>
       ) : null}
@@ -377,19 +429,34 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
           ref={fairingRightRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
         >
-          {/* Cylinder Half */}
+          {/* Outer Shell Cylinder Half */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>
             <cylinderGeometry
               args={[coreRadius + 0.1, coreRadius + 0.1, fairingHeight * 0.7, 32, 1, false, Math.PI, Math.PI]}
             />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
           </mesh>
-          {/* Conical Ogive Nosecone Half */}
+          {/* Inner Acoustic Soundproofing Foam Layer */}
+          <mesh position={[0, fairingHeight * 0.35, 0]}>
+            <cylinderGeometry
+              args={[coreRadius + 0.07, coreRadius + 0.07, fairingHeight * 0.68, 32, 1, false, Math.PI + 0.04, Math.PI - 0.08]}
+            />
+            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+          </mesh>
+
+          {/* Outer Shell Conical Ogive Nosecone Half */}
           <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>
             <coneGeometry
               args={[coreRadius + 0.1, fairingHeight * 0.3, 32, 1, false, Math.PI, Math.PI]}
             />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+          </mesh>
+          {/* Inner Nosecone Acoustic Layer */}
+          <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>
+            <coneGeometry
+              args={[coreRadius + 0.07, fairingHeight * 0.28, 32, 1, false, Math.PI + 0.04, Math.PI - 0.08]}
+            />
+            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
           </mesh>
         </group>
       ) : null}

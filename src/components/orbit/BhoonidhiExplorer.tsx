@@ -329,7 +329,9 @@ export function BhoonidhiExplorer({
             <h2 className="text-xl font-extrabold text-white">
               {isOrbitSuccessful
                 ? 'EOS-04 Successfully Injected into 529 km Sun-Synchronous Orbit'
-                : 'Sub-Orbital Injection / Target Velocity Deficit'}
+                : summary.finalPerigee_km <= 0 || summary.finalVelocity_ms < 7550
+                ? 'Sub-Orbital Injection / Target Velocity Deficit'
+                : 'Closed Orbit, Outside Target Tolerance (Insertion Miss)'}
             </h2>
 
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
@@ -450,10 +452,10 @@ export function BhoonidhiExplorer({
               <span>PAYLOAD DEPLOYMENT LOCKED</span>
             </div>
             <h3 className="text-xl font-extrabold text-white">
-              Satellite Failed to Reach Stable Orbit
+              Satellite Missed the Target Orbit
             </h3>
             <p className="text-xs text-slate-300 font-mono leading-relaxed">
-              PAYLOAD DEPLOYMENT LOCKED — Satellite failed to reach stable orbit. Adjust Challenge Mode parameters or re-fly Auto-Guidance to unlock First Pixel.
+              Target orbit not achieved (see Physics Diagnosis above). Adjust Challenge Mode parameters or re-fly Auto-Guidance to unlock First Pixel.
             </p>
           </div>
 

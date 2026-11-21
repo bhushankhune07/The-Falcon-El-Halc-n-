@@ -13,6 +13,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const solidPlumeRef = useRef<THREE.Group>(null);
   const liquidPlumeRef = useRef<THREE.Group>(null);
   const padSmokeRef = useRef<THREE.Group>(null);
+  const liftoffLightRef = useRef<THREE.PointLight>(null);
 
   const t = simFrame.time_s;
   const isThrusting = simFrame.thrust_N > 1000;
@@ -46,6 +47,10 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   // Plume vacuum expansion factor (flares wider at high altitude)
   const vacExpansion = Math.min(2.5, 1.0 + simFrame.altitude_m / 60000.0);
 
+  // High-altitude vacuum plume expansion factor ("space jellyfish" effect above 35 km)
+  const highAltRatio = Math.max(0, (simFrame.altitude_m - 35000.0) / 45000.0);
+  const liquidVacRadial = vacExpansion * (1.0 + Math.min(2.8, highAltRatio * 2.4));
+
   // Normalize thrust to 0..1 scale
   const throttle = Math.min(1.0, Math.max(0.1, simFrame.thrust_N / 4800000.0));
 
@@ -66,11 +71,25 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
     if (liquidPlumeRef.current) {
       liquidPlumeRef.current.position.y = liquidY;
       const targetScaleY = isLiquidActive && isThrusting ? (0.6 + throttle * 0.8) * flicker * 9.0 : 0.001;
-      const targetScaleXZ = isLiquidActive && isThrusting ? flicker * vacExpansion * 1.2 : 0.001;
+      const targetScaleXZ = isLiquidActive && isThrusting ? flicker * liquidVacRadial * 1.2 : 0.001;
 
       liquidPlumeRef.current.scale.y = THREE.MathUtils.damp(liquidPlumeRef.current.scale.y, targetScaleY, 15, delta);
       liquidPlumeRef.current.scale.x = THREE.MathUtils.damp(liquidPlumeRef.current.scale.x, targetScaleXZ, 15, delta);
       liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(liquidPlumeRef.current.scale.z, targetScaleXZ, 15, delta);
+    }
+
+    // Pad liftoff dynamic lighting (T+0.1s to T+10s)
+    if (liftoffLightRef.current) {
+      if (t > 0.1 && t <= 10.0 && simFrame.altitude_m < 400) {
+        const altitudeFalloff = Math.max(0, 1.0 - simFrame.altitude_m / 350);
+        const timeFalloff = Math.max(0, 1.0 - (t - 0.1) / 9.9);
+        liftoffLightRef.current.visible = true;
+        liftoffLightRef.current.intensity = (8.0 + flicker * 4.0) * altitudeFalloff * timeFalloff;
+        liftoffLightRef.current.position.y = -simFrame.altitude_m + 4.0;
+      } else {
+        liftoffLightRef.current.visible = false;
+        liftoffLightRef.current.intensity = 0;
+      }
     }
 
     // Pad liftoff smoke expansion (T+0.1s to T+12s) - completely hidden at t <= 0.1
@@ -171,8 +190,31 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
           />
         </mesh>
 
+        {/* High-Altitude Vacuum Expansion Jellyfish Envelope (>35 km) */}
+        {simFrame.altitude_m > 35000 && isLiquidActive ? (
+          <mesh position={[0, -4.5, 0]}>
+            <coneGeometry args={[3.8, 9.0, 24, 1, true]} />
+            <meshBasicMaterial
+              color="#a855f7"
+              transparent
+              opacity={Math.min(0.25, highAltRatio * 0.25)}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        ) : null}
+
         <pointLight color="#60a5fa" intensity={3.5} distance={45} decay={2} />
       </group>
+
+      {/* Dynamic liftoff pad light */}
+      <pointLight
+        ref={liftoffLightRef}
+        color="#f97316"
+        distance={90}
+        decay={2}
+        visible={false}
+      />
 
       {/* ======================================================== */}
       {/* T-0.1 TO T+12s COMPACT GROUND FLAME TRENCH EXHAUST CLOUDS*/}
@@ -195,6 +237,23 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
             color="#fde047"
             transparent
             opacity={padSmokeOpacity * 0.9}
+          />
+        </mesh>
+        {/* Water deluge lateral steam billows */}
+        <mesh position={[-14, 2.5, 0]}>
+          <sphereGeometry args={[6.5, 12, 10]} />
+          <meshBasicMaterial
+            color="#f1f5f9"
+            transparent
+            opacity={padSmokeOpacity * 0.85}
+          />
+        </mesh>
+        <mesh position={[14, 2.5, 0]}>
+          <sphereGeometry args={[6.5, 12, 10]} />
+          <meshBasicMaterial
+            color="#e2e8f0"
+            transparent
+            opacity={padSmokeOpacity * 0.85}
           />
         </mesh>
         {/* South trench cloud */}

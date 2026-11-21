@@ -39,11 +39,17 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [timeWarp, setTimeWarp] = useState<number>(5);
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase');
+  const autoPlayNextRef = useRef<boolean>(false);
 
-  // Reset currentTime_s to 0 and isPlaying to false when modifiers change (Item D13)
+  // Reset currentTime_s to 0 when modifiers change; pause unless auto-play was explicitly requested
   useEffect(() => {
     setCurrentTime_s(0);
-    setIsPlaying(false);
+    if (autoPlayNextRef.current) {
+      autoPlayNextRef.current = false;
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
   }, [challengeModifiers]);
 
   const maxTime_s = trajectory.summary.cutoffTime_s;
@@ -118,6 +124,31 @@ export default function App() {
     setCameraMode('pad');
     setActiveScreen('launch');
   };
+
+  // Reset to calibrated Golden Run and automatically start playback from T-0 Pad View
+  const handleResetGoldenRun = useCallback(() => {
+    const isAlreadyNominal =
+      !challengeModifiers.enabled &&
+      challengeModifiers.payloadDeltaKg === 0 &&
+      challengeModifiers.pitchKickDeg === 0 &&
+      challengeModifiers.windScenario === 'nominal';
+
+    setCurrentTime_s(0);
+    setCameraMode('pad');
+    setActiveScreen('launch');
+
+    if (isAlreadyNominal) {
+      setIsPlaying(true);
+    } else {
+      autoPlayNextRef.current = true;
+      setChallengeModifiers({
+        enabled: false,
+        payloadDeltaKg: 0,
+        pitchKickDeg: 0,
+        windScenario: 'nominal',
+      });
+    }
+  }, [challengeModifiers]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#020617] text-slate-100 font-sans overflow-hidden">
@@ -249,18 +280,7 @@ export default function App() {
             modifiers={challengeModifiers}
             onBackToBrief={() => setActiveScreen('brief')}
             onBackToLaunch={() => setActiveScreen('launch')}
-            onResetGoldenRun={() => {
-              setChallengeModifiers({
-                enabled: false,
-                payloadDeltaKg: 0,
-                pitchKickDeg: 0,
-                windScenario: 'nominal',
-              });
-              setCurrentTime_s(0);
-              setIsPlaying(true);
-              setCameraMode('pad');
-              setActiveScreen('launch');
-            }}
+            onResetGoldenRun={handleResetGoldenRun}
           />
         )}
       </main>

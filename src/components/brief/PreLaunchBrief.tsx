@@ -20,10 +20,15 @@ function computeGLOW(m: MissionConfig): string {
   return `${(totalKg / 1000).toFixed(1)} t`;
 }
 
-function getPredictedOutcomePreview(modifiers: ChallengeModeModifiers): string {
+function getPredictedOutcomePreview(
+  modifiers: ChallengeModeModifiers,
+  s: TrajectoryResult['summary']
+): string {
   if (!modifiers.enabled) {
     return 'Nominal gravity turn profile: Calibrated for stable orbit injection and minimal insertion residuals.';
   }
+
+  const verdict = `RK4 solver result: ${s.orbitAchieved ? 'orbit insertion achieved' : 'target orbit NOT achieved'} (cutoff ${s.finalAltitude_km.toFixed(1)} km, perigee ${s.finalPerigee_km.toFixed(1)} km).`;
 
   const notes: string[] = [];
   if (modifiers.payloadDeltaKg > 800) {
@@ -44,9 +49,11 @@ function getPredictedOutcomePreview(modifiers: ChallengeModeModifiers): string {
     notes.push('Jet-stream crosswind induces elevated aerodynamic drag and Max-Q side-load penalties during transonic transition.');
   }
 
-  return notes.length > 0
+  const detail = notes.length > 0
     ? notes.join(' ')
-    : 'Mild perturbations within control authority margins; closed orbit insertion predicted.';
+    : 'Small perturbation: outcome depends on the RK4 result shown above.';
+
+  return `${verdict} ${detail}`;
 }
 
 export function PreLaunchBrief({
@@ -66,7 +73,7 @@ export function PreLaunchBrief({
   const liftoffTWR = t0State && t0State.totalMass_kg > 0
     ? (t0State.thrust_N / (t0State.totalMass_kg * 9.80665)).toFixed(2)
     : '1.68';
-  const predictedImpact = getPredictedOutcomePreview(modifiers);
+  const predictedImpact = getPredictedOutcomePreview(modifiers, trajectory.summary);
 
   return (
     <div className="flex-1 w-full h-full overflow-y-auto p-4 md:p-6 bg-slate-950 text-slate-100 flex flex-col gap-6">

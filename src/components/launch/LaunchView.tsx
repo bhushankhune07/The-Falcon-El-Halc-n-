@@ -1,8 +1,20 @@
-import { Play, Pause, RotateCcw, FastForward, Orbit, ChevronRight, Download } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  FastForward,
+  Orbit,
+  ChevronRight,
+  Download,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { MissionConfig, TrajectoryResult, SimulationState } from '../../sim';
 import { MissionCanvas, SimFrameState, CameraMode } from '../scene';
 import { TelemetrySidebar } from './TelemetrySidebar';
 import { exportTelemetryCsv } from '../../utils/csvExport';
+import { createRocketAudio, RocketAudioManager } from '../../utils/rocketAudio';
 
 interface Props {
   mission: MissionConfig;
@@ -112,6 +124,43 @@ export function LaunchView({
   const altKm = currentState.altitude_m / 1000.0;
   const callout = getFlightDirectorCallout(currentTime_s, maxTime_s);
 
+  // Web Audio procedural rocket sound manager
+  const rocketAudio = useRef<RocketAudioManager | null>(null);
+  const [isAudioOn, setIsAudioOn] = useState(false);
+
+  useEffect(() => {
+    rocketAudio.current = createRocketAudio();
+    return () => {
+      rocketAudio.current?.dispose();
+      rocketAudio.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    rocketAudio.current?.update(currentState.thrust_N, currentState.altitude_m, isPlaying);
+  }, [currentState.thrust_N, currentState.altitude_m, isPlaying]);
+
+  const handleToggleAudio = () => {
+    if (rocketAudio.current) {
+      const next = rocketAudio.current.toggle();
+      setIsAudioOn(next);
+    }
+  };
+
+  const soundSpeed = currentState.altitude_m < 11000 ? 340 - (currentState.altitude_m / 11000) * 45 : 295;
+  const mach = currentState.speed_ms / soundSpeed;
+
+  const stageTimeline = [
+    { label: 'T-0', isDone: currentTime_s > 0, isActive: currentTime_s <= 2.0 },
+    { label: 'S12', isDone: simFrame.airStraponsDetached, isActive: currentTime_s > 0 && !simFrame.airStraponsDetached },
+    { label: 'PS1', isDone: simFrame.ps1Detached, isActive: !simFrame.ps1Detached && currentTime_s > 2.0 },
+    { label: 'PS2', isDone: simFrame.ps2Detached, isActive: simFrame.ps1Detached && !simFrame.ps2Detached },
+    { label: 'FAIRING', isDone: simFrame.fairingSeparated, isActive: currentTime_s >= 170 && !simFrame.fairingSeparated },
+    { label: 'PS3', isDone: simFrame.ps3Detached, isActive: simFrame.ps2Detached && !simFrame.ps3Detached },
+    { label: 'PS4', isDone: simFrame.ps4Cutoff, isActive: simFrame.ps3Detached && !simFrame.ps4Cutoff },
+    { label: 'ORBIT', isDone: simFrame.isOrbitAchieved, isActive: simFrame.ps4Cutoff },
+  ];
+
   // First state crossing 125 km altitude (Item D10)
   const t125km = trajectory.states.find((s) => s.altitude_m >= 125000)?.time_s ?? 180;
 
@@ -187,6 +236,83 @@ export function LaunchView({
             <div className="flex items-center justify-between gap-5">
               <span className="text-slate-400 text-[10px]">DOWNRANGE</span>
               <span className="font-bold text-slate-300">{(currentState.downrange_m / 1000.0).toFixed(1)} km</span>
+            </div>
+          </div>
+
+          {/* ISRO/SpaceX-Style Broadcast Telemetry Strip (Bottom of 3D Canvas) */}
+          <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/85 backdrop-blur-md border border-slate-800/80 shadow-2xl font-mono text-xs">
+            {/* Left: Attitude / Pitch Gyro Indicator */}
+            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+              <div className="relative w-8 h-8 rounded-full border border-slate-700 bg-slate-950 flex items-center justify-center overflow-hidden">
+                {/* Dynamic Artificial Horizon / Pitch Line */}
+                <div
+                  className="absolute w-7 h-0.5 bg-emerald-400 shadow-sm"
+                  style={{
+                    transform: `rotate(${-currentState.pitch_deg}deg)`,
+                    transition: 'transform 0.1s linear',
+                  }}
+                />
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 z-10" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Attitude</span>
+                <span className="text-xs font-bold text-emerald-400 tabular-nums">
+                  {currentState.pitch_deg.toFixed(1)}°
+                </span>
+              </div>
+            </div>
+
+            {/* Center: Stage Sequence Timeline Strip */}
+            <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900/60 border border-slate-800/60 overflow-x-auto text-[10px]">
+              {stageTimeline.map((item) => (
+                <div
+                  key={item.label}
+                  className={`px-1.5 py-0.5 rounded border transition-colors flex items-center gap-1 ${
+                    item.isActive
+                      ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 font-bold shadow-sm shadow-cyan-950'
+                      : item.isDone
+                      ? 'bg-slate-900 border-emerald-900/80 text-emerald-400/80'
+                      : 'border-slate-800 text-slate-600'
+                  }`}
+                >
+                  {item.isDone ? <span className="text-emerald-400 text-[9px]">✓</span> : null}
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: Tabular Speed/Mach/G-force + Audio Toggle */}
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-3 px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800 text-[11px]">
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-slate-400 uppercase">Velocity</span>
+                  <span className="font-bold text-sky-400 tabular-nums">
+                    {(currentState.speed_ms / 1000).toFixed(2)} km/s
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-slate-400 uppercase">Mach</span>
+                  <span className="font-bold text-purple-400 tabular-nums">{mach.toFixed(1)}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-slate-400 uppercase">G-Force</span>
+                  <span className="font-bold text-amber-400 tabular-nums">{currentState.sensedG.toFixed(1)} G</span>
+                </div>
+              </div>
+
+              {/* Procedural Audio Toggle */}
+              <button
+                onClick={handleToggleAudio}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                  isAudioOn
+                    ? 'bg-orange-600/90 border-orange-400 text-white shadow-lg shadow-orange-950/60'
+                    : 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+                title={isAudioOn ? 'Mute Procedural Rocket Sound' : 'Enable Procedural Combustion Rumble (Web Audio API)'}
+              >
+                {isAudioOn ? <Volume2 className="w-3.5 h-3.5 text-white animate-pulse" /> : <VolumeX className="w-3.5 h-3.5" />}
+                <span className="text-[10px] tracking-wide">{isAudioOn ? 'AUDIO ON' : 'AUDIO OFF'}</span>
+              </button>
             </div>
           </div>
         </div>

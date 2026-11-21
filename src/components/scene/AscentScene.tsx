@@ -51,6 +51,32 @@ export function AscentScene({ simFrame, cameraMode, mission }: Props) {
       cam.position.lerp(targetCamPosRef.current, delta * 3.0);
       cam.lookAt(0, 22, 0);
     }
+
+    // Physically motivated camera micro-shake (liftoff acoustic vibration & Max-Q buffeting)
+    // Zero shake when paused (delta === 0)
+    if (delta > 0.0001 && (cameraMode === 'pad' || cameraMode === 'chase')) {
+      const t = simFrame.time_s;
+      let shakeIntensity = 0;
+
+      // Liftoff vibration (T+0.1s to T+12s, tapering smoothly as rocket clears umbilical tower)
+      if (t > 0.1 && t <= 12 && simFrame.altitude_m < 600) {
+        const liftoffTaper = Math.max(0, 1.0 - (t - 0.1) / 12.0);
+        shakeIntensity += liftoffTaper * (cameraMode === 'pad' ? 0.32 : 0.16);
+      }
+
+      // Max-Q aerodynamic buffeting (dynamicPressure_kPa > 50)
+      if (simFrame.dynamicPressure_kPa > 50) {
+        const qRatio = Math.min(1.0, (simFrame.dynamicPressure_kPa - 50) / 40.0);
+        shakeIntensity += qRatio * 0.06;
+      }
+
+      if (shakeIntensity > 0.001) {
+        const jx = (Math.sin(t * 67.0) * 0.65 + Math.cos(t * 103.0) * 0.35) * shakeIntensity;
+        const jy = (Math.cos(t * 79.0) * 0.65 + Math.sin(t * 119.0) * 0.35) * shakeIntensity * 0.7;
+        state.camera.position.x += jx;
+        state.camera.position.y += jy;
+      }
+    }
   });
 
   return (

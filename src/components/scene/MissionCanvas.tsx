@@ -31,9 +31,9 @@ function CameraManager({ cameraMode, isHigh }: { cameraMode: CameraMode; isHigh:
           camera.position.set(0, 75, 140);
           camera.lookAt(0, 0, 0);
         } else {
-          // Free-orbit around the rocket below 120km: center on rocket at (0, 15, 0)
-          camera.position.set(-25, 20, 45);
-          camera.lookAt(0, 15, 0);
+          // Free-orbit around the rocket below 120km: frame the entire 44m PSLV-XL stack cleanly
+          camera.position.set(-55, 48, 95);
+          camera.lookAt(0, 43, 0);
         }
       }
     }
@@ -97,7 +97,7 @@ export function MissionCanvas({
             powerPreference: 'high-performance',
           }}
           camera={{
-            position: cameraMode === 'orbit' ? (isHigh ? [0, 75, 140] : [-25, 20, 45]) : [-18, 16, 36],
+            position: cameraMode === 'orbit' ? (isHigh ? [0, 75, 140] : [-55, 48, 95]) : [-18, 16, 36],
             fov: 45,
             near: 0.1,
             far: 400000,
@@ -113,7 +113,7 @@ export function MissionCanvas({
             dampingFactor={0.05}
             maxDistance={isHigh ? 400 : 120}
             minDistance={isHigh ? 65 : 20}
-            target={isHigh ? [0, 0, 0] : [0, 15, 0]}
+            target={isHigh ? [0, 0, 0] : [0, 43, 0]}
           />
 
           {/* ======================================================== */}

@@ -19,7 +19,7 @@ Built with **React, Vite, TypeScript, Tailwind CSS, Three.js (@react-three/fiber
   - High-precision 4th-Order Runge-Kutta (RK4, $\Delta t = 0.05\text{ s}$) planar ascent physics engine.
   - Consistent propellant mass depletion ($T = \dot{m} \cdot g_0 \cdot I_{sp}$).
   - Piecewise Mach-dependent Cd, hand-built aerodynamic drag curve $C_d(M)$ and exponential atmosphere $\rho(h) = 1.225 \cdot \exp(-h / 7500)$.
-  - Sriharikota Earth rotation velocity boost ($v_0 = \omega_E R \cos(13.72^\circ) \sin(\text{Az}) \approx 452\text{ m/s}$).
+  - Sriharikota Earth rotation velocity boost ($v_0 = \omega_E R \cos(13.72^\circ) \sin(\text{Az}) \approx 290\text{ m/s}$).
   - Closed-loop Auto-Guidance attitude program for circularization into target Sun-Synchronous Orbit (SSO).
   - Instantaneous vis-viva Keplerian orbital element calculation (semi-major axis, perigee, apogee, eccentricity).
 * **Domain 02: Earth Observation & Satellite Data Integration**
@@ -43,10 +43,10 @@ All inert stage masses, propellant loads, and guidance pitch schedules were cali
 | **PS2 Vikas Stage Sep (T+263.2s)** | 175.0 km / 5,380 m/s | 172.9 km / 5,421 m/s | **-1.20% / +0.76%** | ✅ PASS |
 | **PS3 Sep / Coast Phase (T+478.4s)** | 390.0 km / 6,450 m/s | 393.1 km / 6,499 m/s | **+0.79% / +0.76%** | ✅ PASS |
 | **PS4 Cutoff Altitude** | **534.0 km** | **533.6 km** | **-0.07%** | ✅ PASS ($\pm 5\%$) |
-| **PS4 Cutoff Inertial Velocity** | **7,590.0 m/s** | **7,603.0 m/s** | **+0.18%** | ✅ PASS ($\pm 5\%$) |
-| **Final Orbit Perigee** | > 450 km | **520.3 km** | — | ✅ PASS |
-| **Final Orbit Apogee** | Target ~529–580 km | **581.1 km** | — | ✅ PASS |
-| **Orbit Eccentricity** | < 0.15 (near circular) | **0.0044** | — | ✅ PASS |
+| **PS4 Cutoff Inertial Velocity** | **7,590.0 m/s** | **7,604.0 m/s** | **+0.18%** | ✅ PASS ($\pm 5\%$) |
+| **Final Orbit Perigee** | > 450 km | **518.1 km** | — | ✅ PASS |
+| **Final Orbit Apogee** | not ISRO-published (closed-orbit check only) | **585.0 km** | — | model output |
+| **Orbit Eccentricity** | < 0.15 (near circular) | **0.0048** | — | ✅ PASS |
 
 ---
 
@@ -169,13 +169,13 @@ Generates production-optimized static bundle in `/dist`.
 Every displayed metric and asset is classified under our transparent three-tier badge scheme:
 
 * **REAL (ISRO / NRSC Published Data)**:
-  - PSLV-C52 / EOS-04 liftoff mass (276.6 t sim-computed GLOW) and stage propellant specs.
   - Published sequence-of-events milestone checkpoints.
   - Target Sun-Synchronous Orbit parameters (529 km, 97.6° inclination).
   - NRSC Bhoonidhi C-SAR MRS metadata schema fields.
 * **CALIBRATED (Model-Derived)**:
+  - Liftoff mass (276.6 t sim-computed GLOW; differs from nominal PSLV-XL ≈ 320 t) and C52 stage propellant loads, tuned to match milestones.
   - Closed-loop Auto-Guidance pitch schedule and terminal insertion law.
-  - Stage inert mass balance and PS4 effective thrust ($9,500\text{ N}$) tuned to match ISRO cutoff altitude ($533.6\text{ km}$, $-0.07\%$) and velocity ($7,603\text{ m/s}$, $+0.18\%$).
+  - Stage inert mass balance and PS4 effective thrust ($9,500\text{ N}$) tuned to match ISRO cutoff altitude ($533.6\text{ km}$, $-0.07\%$) and velocity ($7,604\text{ m/s}$, $+0.18\%$).
   - Exponential atmospheric density profile $\rho(h) = 1.225 \cdot \exp(-h / 7500)$ and piecewise Mach-dependent Cd, hand-built drag curve.
 * **SYNTHETIC (Model Output & Visuals)**:
   - Challenge Mode wind perturbation presets (*explicitly synthetic scenarios, not MOSDAC data*).

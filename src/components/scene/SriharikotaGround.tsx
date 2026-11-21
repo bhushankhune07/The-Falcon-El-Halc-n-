@@ -9,6 +9,47 @@ interface Props {
   time_s: number;
 }
 
+function LightningTower({ position }: { position: [number, number, number] }) {
+  // 56m tall lattice mast with alternating red and white warning bands
+  const segH = 11;
+  return (
+    <group position={position}>
+      <mesh position={[0, segH * 0.5, 0]} castShadow>
+        <boxGeometry args={[2.5, segH, 2.5]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, segH * 1.5, 0]} castShadow>
+        <boxGeometry args={[2.1, segH, 2.1]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.4} />
+      </mesh>
+      <mesh position={[0, segH * 2.5, 0]} castShadow>
+        <boxGeometry args={[1.7, segH, 1.7]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, segH * 3.5, 0]} castShadow>
+        <boxGeometry args={[1.3, segH, 1.3]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.4} />
+      </mesh>
+      <mesh position={[0, segH * 4.5, 0]} castShadow>
+        <boxGeometry args={[0.9, segH, 0.9]} />
+        <meshStandardMaterial color="#dc2626" roughness={0.5} />
+      </mesh>
+
+      {/* Top lightning arrestor needle */}
+      <mesh position={[0, segH * 5 + 4, 0]}>
+        <cylinderGeometry args={[0.08, 0.35, 8, 8]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
+      </mesh>
+
+      {/* Pad illumination floodlight bracket */}
+      <mesh position={[0, segH * 3.2, 0]}>
+        <boxGeometry args={[1.8, 0.5, 1.8]} />
+        <meshStandardMaterial color="#fef08a" emissive="#eab308" emissiveIntensity={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
 export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
   const groundGroupRef = useRef<THREE.Group>(null);
   const umbilicalArmRef = useRef<THREE.Group>(null);
@@ -48,6 +89,18 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
         <boxGeometry args={[16, 5.5, 36]} />
         <meshStandardMaterial color="#1e293b" roughness={0.9} />
       </mesh>
+
+      {/* 4 Iconic FLP Lightning Protection Lattice Towers (Sriharikota FLP) */}
+      <LightningTower position={[42, 0, 42]} />
+      <LightningTower position={[-42, 0, 42]} />
+      <LightningTower position={[42, 0, -42]} />
+      <LightningTower position={[-42, 0, -42]} />
+
+      {/* Launch Pad Perimeter Floodlights */}
+      <pointLight position={[42, 35, 42]} intensity={0.9} color="#fef08a" distance={90} />
+      <pointLight position={[-42, 35, 42]} intensity={0.9} color="#fef08a" distance={90} />
+      <pointLight position={[42, 35, -42]} intensity={0.9} color="#fef08a" distance={90} />
+      <pointLight position={[-42, 35, -42]} intensity={0.9} color="#fef08a" distance={90} />
 
       {/* ======================================================== */}
       {/* UMBILICAL LAUNCH TOWER & SWING ARMS                       */}
