@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Rocket, ShieldCheck, Database, Compass } from 'lucide-react';
+import { Rocket, ShieldCheck, Database, Compass, RotateCcw } from 'lucide-react';
 import {
   SimulationEngine,
   PRESET_MISSIONS,
@@ -11,12 +11,14 @@ import { deriveSimFrameState, CameraMode } from './components/scene';
 import { PreLaunchBrief } from './components/brief/PreLaunchBrief';
 import { LaunchView } from './components/launch/LaunchView';
 import { BhoonidhiExplorer } from './components/orbit/BhoonidhiExplorer';
+import { ProvenanceModal } from './components/common/ProvenanceModal';
 
 export type ScreenMode = 'brief' | 'launch' | 'orbit';
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenMode>('brief');
   const [selectedMissionId, setSelectedMissionId] = useState<string>(DEFAULT_MISSION_ID);
+  const [isProvenanceOpen, setIsProvenanceOpen] = useState<boolean>(false);
   const [challengeModifiers, setChallengeModifiers] = useState<ChallengeModeModifiers>({
     enabled: false,
     payloadDeltaKg: 0,
@@ -172,7 +174,7 @@ export default function App() {
         </nav>
 
         {/* Active Mission & Provenance Button */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-xs font-mono">
             <span className="text-slate-400">MISSION:</span>
             <span className="text-amber-400 font-semibold">{mission.variant}</span>
@@ -180,8 +182,20 @@ export default function App() {
 
           <button
             onClick={() => {
-              alert('Data Provenance & Scientific Honesty modal will open here in Commit 5.');
+              setCurrentTime_s(0);
+              setIsPlaying(false);
+              setCameraMode('pad');
+              setActiveScreen('brief');
             }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-mono bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors"
+            title="Reset simulation to T-0 Brief"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+
+          <button
+            onClick={() => setIsProvenanceOpen(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -201,6 +215,7 @@ export default function App() {
               setSelectedMissionId(id);
               setCurrentTime_s(0);
               setIsPlaying(false);
+              setCameraMode('pad');
             }}
             modifiers={challengeModifiers}
             onUpdateModifiers={setChallengeModifiers}
@@ -236,6 +251,12 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Data Provenance & Scientific Honesty Modal */}
+      <ProvenanceModal
+        isOpen={isProvenanceOpen}
+        onClose={() => setIsProvenanceOpen(false)}
+      />
     </div>
   );
 }

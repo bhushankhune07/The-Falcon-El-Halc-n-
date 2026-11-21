@@ -262,7 +262,7 @@ export function BhoonidhiExplorer({ trajectory, modifiers }: Props) {
                 </h3>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Verified Bhoonidhi Snapshot — 21 Nov 2026
+                Representative EOS-04 Metadata Record (NRSC Bhoonidhi Open Data Schema)
               </span>
             </div>
 
@@ -451,9 +451,14 @@ export function BhoonidhiExplorer({ trajectory, modifiers }: Props) {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <span>Dark Tone: Specular Water Body</span>
-              <span>Light Tone: Rough Canopy / Rice Fields</span>
+            <div className="flex flex-col gap-1 text-[10px] font-mono text-slate-400">
+              <div className="flex items-center justify-between">
+                <span>Dark Tone: Specular Water Body</span>
+                <span>Light Tone: Rough Canopy / Rice Fields</span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-500 italic">
+                * Procedural C-band SAR swath illustration (supports dropping in a real Bhoonidhi quicklook image via <code className="text-cyan-400">quicklookUrl</code>).
+              </p>
             </div>
           </div>
         </div>

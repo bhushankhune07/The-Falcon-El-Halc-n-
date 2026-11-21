@@ -4,7 +4,7 @@
     "satellite": "EOS-04",
     "sensor": "C-SAR",
     "instrumentMode": "MRS (Medium Resolution ScanSAR)",
-    "productLevel": "Level-2 GeoTIFF / Level-1B SLC",
+    "productLevel": "Level-2 GeoTIFF (Terrain Geo-Referenced) / Level-1B (Ground Range)",
     "polarisation": "Dual-Pol (HH + HV)",
     "band": "C-band (5.35 GHz, λ ≈ 5.6 cm)",
     "resolution_m": 25.0,
