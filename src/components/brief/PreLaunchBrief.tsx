@@ -1,0 +1,296 @@
+import { Rocket, ShieldAlert, Award, Sliders, Wind, CheckCircle2, ChevronRight } from 'lucide-react';
+import { ChallengeModeModifiers, TrajectoryResult, PRESET_MISSIONS } from '../../sim';
+import { DownrangeMap } from './DownrangeMap';
+
+interface Props {
+  selectedMissionId: string;
+  onSelectMission: (id: string) => void;
+  modifiers: ChallengeModeModifiers;
+  onUpdateModifiers: (mods: ChallengeModeModifiers) => void;
+  trajectory: TrajectoryResult;
+  onProceedToLaunch: () => void;
+}
+
+export function PreLaunchBrief({
+  selectedMissionId,
+  onSelectMission,
+  modifiers,
+  onUpdateModifiers,
+  trajectory,
+  onProceedToLaunch,
+}: Props) {
+  const currentMission = PRESET_MISSIONS[selectedMissionId] || PRESET_MISSIONS['pslv-c52-eos04'];
+
+  return (
+    <div className="flex-1 w-full h-full overflow-y-auto p-4 md:p-6 bg-slate-950 text-slate-100 flex flex-col gap-6">
+      {/* ======================================================== */}
+      {/* BRIEF HEADER BANNER                                      */}
+      {/* ======================================================== */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 shadow-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+              MISSION BRIEFING // T-0 PREPARATION
+            </span>
+            <span className="text-xs font-mono text-slate-400">SDSC SHAR FLP</span>
+          </div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">
+            {currentMission.name}
+          </h2>
+          <p className="text-xs text-slate-400 max-w-2xl">
+            {currentMission.description}
+          </p>
+        </div>
+
+        <button
+          onClick={onProceedToLaunch}
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono font-bold text-sm shadow-lg shadow-orange-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <span>PROCEED TO LAUNCHPAD (T-0)</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 2-COLUMN MAIN CONTENT: LEFT CONTROLS, RIGHT MAP          */}
+      {/* ======================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column (5 cols): Mission Cards & Guidance Modes */}
+        <div className="lg:col-span-5 flex flex-col gap-5">
+          {/* 1. MISSION PRESETS SELECTOR */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-mono font-semibold text-slate-300 tracking-wider flex items-center gap-2">
+              <Rocket className="w-3.5 h-3.5 text-orange-400" />
+              SELECT MISSION ARCHITECTURE
+            </h3>
+
+            <div className="flex flex-col gap-2.5">
+              {/* Golden Path: PSLV-C52 / EOS-04 */}
+              <button
+                onClick={() => onSelectMission('pslv-c52-eos04')}
+                className={`p-3.5 rounded-xl border text-left transition-all ${
+                  selectedMissionId === 'pslv-c52-eos04'
+                    ? 'bg-slate-900/90 border-orange-500/80 shadow-md shadow-orange-500/10'
+                    : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900/70 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-sm text-white flex items-center gap-2">
+                    PSLV-C52 / EOS-04
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                      <Award className="w-2.5 h-2.5" /> GOLDEN PATH
+                    </span>
+                  </span>
+                  {selectedMissionId === 'pslv-c52-eos04' ? (
+                    <CheckCircle2 className="w-4 h-4 text-orange-400" />
+                  ) : null}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed mb-2">
+                  PSLV-XL 4-stage vehicle carrying RISAT-1A (EOS-04) into 529 km Sun-Synchronous Orbit. Unlocks live Bhoonidhi C-band SAR satellite explorer.
+                </p>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                  <span>GLOW: ~315 t</span>
+                  <span>Payload: 1,736 kg</span>
+                  <span className="text-cyan-400">Target: 529 km SSO</span>
+                </div>
+              </button>
+
+              {/* Preset 2: PSLV-C25 / Mangalyaan (MOM) */}
+              <button
+                onClick={() => onSelectMission('pslv-c25-mom')}
+                className={`p-3.5 rounded-xl border text-left transition-all ${
+                  selectedMissionId === 'pslv-c25-mom'
+                    ? 'bg-slate-900/90 border-cyan-500/80 shadow-md shadow-cyan-500/10'
+                    : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900/70 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-sm text-white">PSLV-C25 / Mangalyaan (MOM)</span>
+                  {selectedMissionId === 'pslv-c25-mom' ? (
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+                  ) : null}
+                </div>
+                <div className="mb-2">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Launch &amp; Earth Parking-Orbit Phase only — interplanetary cruise not modelled
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                  <span>GLOW: 320 t</span>
+                  <span>Craft: 1,337 kg</span>
+                  <span className="text-cyan-400">Target: 250 km Parking Orbit</span>
+                </div>
+              </button>
+
+              {/* Preset 3: PSLV-C57 / Aditya-L1 */}
+              <button
+                onClick={() => onSelectMission('pslv-c57-aditya-l1')}
+                className={`p-3.5 rounded-xl border text-left transition-all ${
+                  selectedMissionId === 'pslv-c57-aditya-l1'
+                    ? 'bg-slate-900/90 border-amber-500/80 shadow-md shadow-amber-500/10'
+                    : 'bg-slate-900/40 border-slate-800/80 hover:bg-slate-900/70 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-sm text-white">PSLV-C57 / Aditya-L1</span>
+                  {selectedMissionId === 'pslv-c57-aditya-l1' ? (
+                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                  ) : null}
+                </div>
+                <div className="mb-2">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Launch &amp; Earth Parking-Orbit Phase only — L1 cruise not modelled
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
+                  <span>GLOW: 320 t</span>
+                  <span>Observatory: 1,475 kg</span>
+                  <span className="text-cyan-400">Target: 245 km Parking Orbit</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. GUIDANCE & CHALLENGE MODE TOGGLE */}
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-orange-400" />
+                <h3 className="text-xs font-mono font-semibold text-slate-200 tracking-wider">
+                  GUIDANCE MODE
+                </h3>
+              </div>
+
+              {/* Toggle switch */}
+              <div className="flex items-center gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+                <button
+                  onClick={() => onUpdateModifiers({ ...modifiers, enabled: false })}
+                  className={`px-3 py-1 rounded transition-colors ${
+                    !modifiers.enabled
+                      ? 'bg-emerald-600 text-white font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Auto-Guidance (Golden Run)
+                </button>
+                <button
+                  onClick={() => onUpdateModifiers({ ...modifiers, enabled: true })}
+                  className={`px-3 py-1 rounded transition-colors ${
+                    modifiers.enabled
+                      ? 'bg-orange-600 text-white font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Challenge Mode
+                </button>
+              </div>
+            </div>
+
+            {/* Challenge Mode Modifier Sliders */}
+            {modifiers.enabled ? (
+              <div className="space-y-4 pt-2 border-t border-slate-800">
+                <div className="flex items-center gap-2 text-[11px] font-mono text-amber-400">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Challenge Mode Active — Manual flight disturbance modifiers enabled</span>
+                </div>
+
+                {/* Slider 1: Payload Mass Delta */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300">Payload Mass Delta:</span>
+                    <span className="font-bold text-amber-400">
+                      {modifiers.payloadDeltaKg >= 0 ? `+${modifiers.payloadDeltaKg}` : modifiers.payloadDeltaKg} kg
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-500}
+                    max={1500}
+                    step={50}
+                    value={modifiers.payloadDeltaKg}
+                    onChange={(e) =>
+                      onUpdateModifiers({ ...modifiers, payloadDeltaKg: parseInt(e.target.value) })
+                    }
+                    className="w-full accent-orange-500 h-1.5 bg-slate-800 rounded cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>-500 kg (Light)</span>
+                    <span>0 kg (Nominal)</span>
+                    <span>+1500 kg (Overload)</span>
+                  </div>
+                </div>
+
+                {/* Slider 2: Pitch Kick Delta */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300">Pitch Kick Bias:</span>
+                    <span className="font-bold text-cyan-400">
+                      {modifiers.pitchKickDeg >= 0 ? `+${modifiers.pitchKickDeg.toFixed(1)}` : modifiers.pitchKickDeg.toFixed(1)}°
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-5.0}
+                    max={5.0}
+                    step={0.5}
+                    value={modifiers.pitchKickDeg}
+                    onChange={(e) =>
+                      onUpdateModifiers({ ...modifiers, pitchKickDeg: parseFloat(e.target.value) })
+                    }
+                    className="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>-5° (Lofted climb)</span>
+                    <span>0° (Calibrated)</span>
+                    <span>+5° (Shallow burn)</span>
+                  </div>
+                </div>
+
+                {/* Selector 3: Wind Scenario Preset */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300 flex items-center gap-1.5">
+                      <Wind className="w-3.5 h-3.5 text-blue-400" />
+                      Atmospheric Wind Preset:
+                    </span>
+                    <span className="font-bold text-sky-400 uppercase text-[11px]">
+                      {modifiers.windScenario}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                    {(['nominal', 'moderate', 'high_crosswind'] as const).map((w) => (
+                      <button
+                        key={w}
+                        onClick={() => onUpdateModifiers({ ...modifiers, windScenario: w })}
+                        className={`py-1.5 px-2 rounded border text-center transition-all ${
+                          modifiers.windScenario === w
+                            ? 'bg-sky-500/20 border-sky-500 text-sky-300 font-bold'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-300'
+                        }`}
+                      >
+                        {w === 'nominal' ? 'Nominal' : w === 'moderate' ? 'Moderate' : 'High Cross'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-mono text-slate-400 italic">
+                    * Synthetic scenario presets, not live MOSDAC data.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-emerald-950/30 border border-emerald-500/20 text-xs font-mono text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-none" />
+                <span>Auto-Guidance active: Calibrated closed-loop pitch law targetting 529–534 km SSO.</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column (7 cols): Leaflet Downrange Map */}
+        <div className="lg:col-span-7 flex flex-col min-h-[460px]">
+          <DownrangeMap mission={currentMission} trajectory={trajectory} />
+        </div>
+      </div>
+    </div>
+  );
+}
