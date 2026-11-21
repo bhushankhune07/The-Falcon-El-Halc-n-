@@ -1,0 +1,191 @@
+{
+  "id": "pslv-c57-aditya-l1",
+  "name": "PSLV-C57 / Aditya-L1",
+  "variant": "PSLV-XL",
+  "description": "ISRO Aditya-L1 Solar Coronagraphy Observatory launched to an initial Earth Parking Orbit (EPO) prior to Lagrange Point 1 (L1) transfer burns.",
+  "payloadName": "Aditya-L1 Solar Craft (1,481 kg)",
+  "payloadMass_kg": 1481,
+  "launchSite": {
+    "name": "SDSC Sriharikota (Second Launch Pad)",
+    "latitude_deg": 13.7199,
+    "longitude_deg": 80.2304,
+    "azimuth_deg": 102.5,
+    "elevation_m": 3.0
+  },
+  "targetOrbit": {
+    "type": "Earth Parking Orbit (EPO)",
+    "altitude_km": 235.0,
+    "inclination_deg": 19.5,
+    "period_min": 89.5
+  },
+  "fairing": {
+    "mass_kg": 1150,
+    "diameter_m": 2.8,
+    "jettisonTime_s": 191.0,
+    "jettisonAltitude_m": 115000
+  },
+  "stages": [
+    {
+      "id": "strap_on_ground",
+      "name": "S12 Ground Strap-ons (4x)",
+      "type": "strap_on_ground",
+      "propellantName": "HTPB Solid",
+      "count": 4,
+      "dryMassPerUnit_kg": 1800,
+      "propellantMassPerUnit_kg": 12200,
+      "thrustSeaLevelPerUnit_N": 703000,
+      "thrustVacuumPerUnit_N": 719000,
+      "ispSeaLevel_s": 253,
+      "ispVacuum_s": 262,
+      "ignitionTime_s": 0.0,
+      "burnDuration_s": 49.5,
+      "separationTime_s": 70.0
+    },
+    {
+      "id": "ps1_core",
+      "name": "PS1 Core (S139)",
+      "type": "ps1_core",
+      "propellantName": "HTPB Solid",
+      "count": 1,
+      "dryMassPerUnit_kg": 30200,
+      "propellantMassPerUnit_kg": 139000,
+      "thrustSeaLevelPerUnit_N": 4430000,
+      "thrustVacuumPerUnit_N": 4846000,
+      "ispSeaLevel_s": 237,
+      "ispVacuum_s": 269,
+      "ignitionTime_s": 0.0,
+      "burnDuration_s": 108.0,
+      "separationTime_s": 110.0
+    },
+    {
+      "id": "strap_on_air",
+      "name": "S12 Air-lit Strap-ons (2x)",
+      "type": "strap_on_air",
+      "propellantName": "HTPB Solid",
+      "count": 2,
+      "dryMassPerUnit_kg": 1800,
+      "propellantMassPerUnit_kg": 12200,
+      "thrustSeaLevelPerUnit_N": 703000,
+      "thrustVacuumPerUnit_N": 719000,
+      "ispSeaLevel_s": 253,
+      "ispVacuum_s": 262,
+      "ignitionTime_s": 25.0,
+      "burnDuration_s": 49.5,
+      "separationTime_s": 92.0
+    },
+    {
+      "id": "ps2",
+      "name": "PS2 (Vikas Liquid Stage)",
+      "type": "ps2",
+      "propellantName": "UH25 + N2O4 Liquid",
+      "count": 1,
+      "dryMassPerUnit_kg": 5300,
+      "propellantMassPerUnit_kg": 41500,
+      "thrustSeaLevelPerUnit_N": 725000,
+      "thrustVacuumPerUnit_N": 799000,
+      "ispSeaLevel_s": 280,
+      "ispVacuum_s": 293,
+      "ignitionTime_s": 110.0,
+      "burnDuration_s": 151.0,
+      "separationTime_s": 262.5
+    },
+    {
+      "id": "ps3",
+      "name": "PS3 (HPS3 Solid Motor)",
+      "type": "ps3",
+      "propellantName": "HTPB Solid",
+      "count": 1,
+      "dryMassPerUnit_kg": 1050,
+      "propellantMassPerUnit_kg": 7650,
+      "thrustSeaLevelPerUnit_N": 200000,
+      "thrustVacuumPerUnit_N": 240000,
+      "ispSeaLevel_s": 280,
+      "ispVacuum_s": 295,
+      "ignitionTime_s": 263.5,
+      "burnDuration_s": 112.0,
+      "separationTime_s": 580.0
+    },
+    {
+      "id": "ps4",
+      "name": "PS4 (Twin Liquid Engines)",
+      "type": "ps4",
+      "propellantName": "MMH + MON3 Liquid",
+      "count": 1,
+      "dryMassPerUnit_kg": 920,
+      "propellantMassPerUnit_kg": 2500,
+      "thrustSeaLevelPerUnit_N": 14000,
+      "thrustVacuumPerUnit_N": 14600,
+      "ispSeaLevel_s": 300,
+      "ispVacuum_s": 318,
+      "ignitionTime_s": 580.0,
+      "burnDuration_s": 448.0,
+      "separationTime_s": 1035.0
+    }
+  ],
+  "pitchSchedule": [
+    { "time_s": 0.0, "pitchDeg": 90.0 },
+    { "time_s": 12.0, "pitchDeg": 89.1 },
+    { "time_s": 25.0, "pitchDeg": 81.5 },
+    { "time_s": 50.0, "pitchDeg": 66.0 },
+    { "time_s": 70.0, "pitchDeg": 55.0 },
+    { "time_s": 92.0, "pitchDeg": 44.5 },
+    { "time_s": 110.0, "pitchDeg": 36.5 },
+    { "time_s": 191.0, "pitchDeg": 22.5 },
+    { "time_s": 262.5, "pitchDeg": 12.8 },
+    { "time_s": 376.0, "pitchDeg": 6.8 },
+    { "time_s": 580.0, "pitchDeg": 1.1 },
+    { "time_s": 800.0, "pitchDeg": 0.2 },
+    { "time_s": 1030.0, "pitchDeg": 0.0 }
+  ],
+  "publishedMilestones": [
+    {
+      "time_s": 70.0,
+      "event": "Ground-lit Strap-ons Separation",
+      "expectedAltitude_km": 24.0,
+      "expectedVelocity_ms": 1400.0,
+      "tolerancePct": 8.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 110.0,
+      "event": "PS1 Separation",
+      "expectedAltitude_km": 53.5,
+      "expectedVelocity_ms": 2310.0,
+      "tolerancePct": 8.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 262.5,
+      "event": "PS2 Separation",
+      "expectedAltitude_km": 223.0,
+      "expectedVelocity_ms": 5420.0,
+      "tolerancePct": 8.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 1030.0,
+      "event": "Aditya-L1 Craft Injection",
+      "expectedAltitude_km": 235.0,
+      "expectedVelocity_ms": 7850.0,
+      "tolerancePct": 10.0,
+      "isPublished": true
+    }
+  ],
+  "provenance": {
+    "sources": {
+      "brochure": "ISRO PSLV-C57 / Aditya-L1 Official Mission Brochure (Sep 2023)",
+      "bhoonidhi": "N/A (Solar Lagrange L1 Mission)",
+      "astrodynamics": "Planar Earth Parking Orbit Insertion"
+    },
+    "tags": {
+      "liftoffMass_320t": "REAL",
+      "adityaPayloadMass_1481kg": "REAL",
+      "targetParkingOrbit": "REAL",
+      "publishedMilestones": "REAL",
+      "autoGuidancePitchSchedule": "CALIBRATED",
+      "stageInertMassBalance": "CALIBRATED",
+      "l1Cruise": "SYNTHETIC"
+    }
+  },
+  "disclaimer": "Launch & Earth Parking-Orbit Phase only; L1 cruise not modelled."
+}

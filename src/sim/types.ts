@@ -1,29 +1,32 @@
 /**
  * BharatLaunch 3D: Mission, Physics & Telemetry Types
- * Reference: ISRO PSLV-C52 / EOS-04 Mission Brochure & Flight Characteristics
+ * Strictly decoupled from React / Three.js. 100% SI Units.
  */
 
-export interface StageConfig {
-  name: string; // e.g. "S12 Ground Strap-ons", "PS1 Core", "S12 Air-lit Strap-ons", "PS2", "PS3", "PS4"
-  type: 'strap_on_ground' | 'ps1_core' | 'strap_on_air' | 'ps2' | 'ps3' | 'ps4';
-  fuelType: 'Solid' | 'Liquid' | 'Earth Storable Liquid';
-  propellantName: string; // e.g. "HTPB", "UH25 + N2O4", "Mono Methyl Hydrazine + MON3"
-  dryMass_kg: number;
-  propellantMass_kg: number;
-  thrustVacuum_kN: number;
-  thrustSeaLevel_kN: number;
+export type ProvenanceTag = 'REAL' | 'CALIBRATED' | 'SYNTHETIC';
+
+export interface StageDefinition {
+  id: string;
+  name: string;
+  type: 'strap_on_ground' | 'strap_on_air' | 'ps1_core' | 'ps2' | 'ps3' | 'ps4';
+  propellantName: string;
+  count: number; // e.g. 4 for ground strap-ons, 2 for air strap-ons, 1 for stages
+  dryMassPerUnit_kg: number;
+  propellantMassPerUnit_kg: number;
+  thrustVacuumPerUnit_N: number;
+  thrustSeaLevelPerUnit_N: number;
   ispVacuum_s: number;
   ispSeaLevel_s: number;
   burnDuration_s: number;
-  startTime_s: number; // Ignited at T+
-  separationTime_s: number; // Staged / jettisoned at T+
+  ignitionTime_s: number;
+  separationTime_s: number;
 }
 
-export interface FairingConfig {
+export interface FairingDefinition {
   mass_kg: number;
   diameter_m: number;
-  jettisonAltitude_km: number;
   jettisonTime_s: number;
+  jettisonAltitude_m: number;
 }
 
 export interface ISROMilestone {
@@ -31,8 +34,22 @@ export interface ISROMilestone {
   event: string;
   expectedAltitude_km: number;
   expectedVelocity_ms: number;
-  tolerancePct?: number; // default +/- 5%
+  tolerancePct?: number; // default 5%
   isPublished: boolean;
+}
+
+export interface PitchScheduleNode {
+  time_s: number;
+  pitchDeg: number; // Angle relative to local horizontal (90 = straight up, 0 = parallel to surface)
+}
+
+export interface MissionProvenance {
+  sources: {
+    brochure: string;
+    bhoonidhi: string;
+    astrodynamics: string;
+  };
+  tags: Record<string, ProvenanceTag>;
 }
 
 export interface MissionConfig {
@@ -42,12 +59,6 @@ export interface MissionConfig {
   description: string;
   payloadName: string;
   payloadMass_kg: number;
-  targetOrbit: {
-    type: string; // e.g., "Sun-Synchronous Polar Orbit (SSO)"
-    altitude_km: number;
-    inclination_deg: number;
-    period_min: number;
-  };
   launchSite: {
     name: string;
     latitude_deg: number;
@@ -55,98 +66,110 @@ export interface MissionConfig {
     azimuth_deg: number;
     elevation_m: number;
   };
-  pitchKick: {
-    altitudeStart_m: number;
-    altitudeEnd_m: number;
-    initialAngle_deg: number; // Angle from vertical
+  targetOrbit: {
+    type: string;
+    altitude_km: number;
+    inclination_deg: number;
+    period_min: number;
   };
-  stages: StageConfig[];
-  fairing: FairingConfig;
+  fairing: FairingDefinition;
+  stages: StageDefinition[];
+  pitchSchedule: PitchScheduleNode[];
   publishedMilestones: ISROMilestone[];
+  provenance: MissionProvenance;
   disclaimer?: string;
 }
 
 export interface SimulationState {
   time_s: number;
-  stageIndex: number;
-  activeStageName: string;
   
-  // State coordinates in 2D launch plane
-  // x: horizontal downrange distance (m) along launch azimuth
-  // y: altitude (m) above Earth surface
+  // Coordinates in 2D launch plane
+  // X: inertial horizontal/orbital coordinate (m)
+  // Y: inertial vertical/orbital coordinate (m)
   // r: distance from Earth center (m)
-  x_m: number;
-  y_m: number;
+  // h: altitude above Earth radius (m)
+  // downrange_m: surface arc distance from Sriharikota pad (m)
   r_m: number;
+  altitude_m: number;
+  downrange_m: number;
 
-  // Velocity components
+  // Inertial velocity
   vx_ms: number;
   vy_ms: number;
-  speed_ms: number;
+  speed_ms: number; // inertial speed
+
+  // Relative velocity (w.r.t. rotating atmosphere)
+  relSpeed_ms: number;
   mach: number;
 
-  // Rocket orientation and flight path
-  pitchAngle_deg: number; // Pitch from local horizontal (90 = straight up, 0 = horizontal)
-  flightPathAngle_deg: number; // Angle of velocity vector from horizontal
-  angleofAttack_deg: number;
+  // Angles
+  pitch_deg: number; // Pitch w.r.t. local horizontal
+  flightPathAngle_deg: number; // Velocity angle w.r.t. local horizontal
 
-  // Mass & Propulsion
-  mass_kg: number;
+  // Propulsion & Mass
+  totalMass_kg: number;
   thrust_N: number;
   massFlow_kgs: number;
-  gSensed: number; // in G's
+  sensedG: number; // (Thrust - Drag) / (m * g0)
 
-  // Atmospheric properties
+  // Atmosphere
   density_kgm3: number;
   dynamicPressure_kPa: number;
   dragForce_N: number;
   cd: number;
 
-  // Orbital mechanics
+  // Orbital Elements at current instant
   semiMajorAxis_km: number;
-  perigeeAltitude_km: number;
-  apogeeAltitude_km: number;
+  perigee_km: number;
+  apogee_km: number;
   eccentricity: number;
-  orbitEnergy_Jkg: number;
 
-  // Event flags
+  // Events & Staging
+  activeStages: string[];
   events: string[];
-  isOrbitReached: boolean;
-  isStagingHappening: boolean;
-  stagedComponents: string[];
+  isOrbitAchieved: boolean;
+  isStagingEvent: boolean;
 }
 
-export interface ChallengeModeParams {
+export type WindScenario = 'nominal' | 'moderate' | 'high_crosswind';
+
+export interface ChallengeModeModifiers {
   enabled: boolean;
-  payloadMassDelta_kg: number; // e.g. -500 to +1000 kg
-  pitchKickAngleDelta_deg: number; // e.g. -5 to +5 deg
-  windPreset: 'calm' | 'moderate_headwind' | 'severe_shear' | 'tailwind_boost';
+  payloadDeltaKg: number; // -500 to +1500 kg
+  pitchKickDeg: number; // delta to pitch kick (-5 to +5 deg)
+  windScenario: WindScenario;
 }
 
-export interface SimulationTrajectory {
+export interface MilestoneComparison {
+  event: string;
+  time_s: number;
+  targetAltitude_km: number;
+  actualAltitude_km: number;
+  altitudeErrorPct: number;
+  targetVelocity_ms: number;
+  actualVelocity_ms: number;
+  velocityErrorPct: number;
+  passed: boolean;
+}
+
+export interface TrajectoryResult {
   mission: MissionConfig;
-  samples: SimulationState[];
+  modifiers: ChallengeModeModifiers;
+  states: SimulationState[]; // 1 Hz sampled states for fast telemetry/charting
+  fullStateCount: number;
   summary: {
     cutoffTime_s: number;
     finalAltitude_km: number;
     finalVelocity_ms: number;
     finalPerigee_km: number;
     finalApogee_km: number;
+    finalEccentricity: number;
     maxQ_kPa: number;
     maxQTime_s: number;
-    maxGSensed: number;
+    maxG: number;
     maxGTime_s: number;
-    orbitSuccess: boolean;
-    milestoneErrors: {
-      event: string;
-      time_s: number;
-      actualAlt_km: number;
-      targetAlt_km: number;
-      altErrorPct: number;
-      actualVel_ms: number;
-      targetVel_ms: number;
-      velErrorPct: number;
-      passed: boolean;
-    }[];
+    orbitAchieved: boolean;
+    orbitTargetAltitude_km: number;
+    milestoneComparisons: MilestoneComparison[];
   };
 }

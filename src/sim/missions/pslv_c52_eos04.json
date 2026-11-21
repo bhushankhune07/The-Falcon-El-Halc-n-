@@ -1,0 +1,221 @@
+{
+  "id": "pslv-c52-eos04",
+  "name": "PSLV-C52 / EOS-04 (Golden Run)",
+  "variant": "PSLV-XL",
+  "description": "ISRO Radar Imaging Satellite (RISAT-1A / EOS-04) launched into a 529 km Sun-Synchronous Polar Orbit (SSO) from Satish Dhawan Space Centre, Sriharikota.",
+  "payloadName": "EOS-04 (1,710 kg) + 2 Rideshares",
+  "payloadMass_kg": 1736,
+  "launchSite": {
+    "name": "SDSC Sriharikota (First Launch Pad)",
+    "latitude_deg": 13.7199,
+    "longitude_deg": 80.2304,
+    "azimuth_deg": 140.0,
+    "elevation_m": 3.0
+  },
+  "targetOrbit": {
+    "type": "Sun-Synchronous Polar Orbit (SSO)",
+    "altitude_km": 529.0,
+    "inclination_deg": 97.6,
+    "period_min": 95.2
+  },
+  "fairing": {
+    "mass_kg": 1150,
+    "diameter_m": 2.8,
+    "jettisonTime_s": 176.6,
+    "jettisonAltitude_m": 115000
+  },
+  "stages": [
+    {
+      "id": "strap_on_ground",
+      "name": "S12 Ground Strap-ons (4x)",
+      "type": "strap_on_ground",
+      "propellantName": "HTPB Solid",
+      "count": 4,
+      "dryMassPerUnit_kg": 1800,
+      "propellantMassPerUnit_kg": 11400,
+      "thrustSeaLevelPerUnit_N": 703000,
+      "thrustVacuumPerUnit_N": 719000,
+      "ispSeaLevel_s": 250,
+      "ispVacuum_s": 260,
+      "ignitionTime_s": 0.0,
+      "burnDuration_s": 49.5,
+      "separationTime_s": 69.9
+    },
+    {
+      "id": "ps1_core",
+      "name": "PS1 Core (S139)",
+      "type": "ps1_core",
+      "propellantName": "HTPB Solid",
+      "count": 1,
+      "dryMassPerUnit_kg": 30200,
+      "propellantMassPerUnit_kg": 120000,
+      "thrustSeaLevelPerUnit_N": 4430000,
+      "thrustVacuumPerUnit_N": 4846000,
+      "ispSeaLevel_s": 220,
+      "ispVacuum_s": 250,
+      "ignitionTime_s": 0.0,
+      "burnDuration_s": 108.0,
+      "separationTime_s": 109.8
+    },
+    {
+      "id": "strap_on_air",
+      "name": "S12 Air-lit Strap-ons (2x)",
+      "type": "strap_on_air",
+      "propellantName": "HTPB Solid",
+      "count": 2,
+      "dryMassPerUnit_kg": 1800,
+      "propellantMassPerUnit_kg": 11400,
+      "thrustSeaLevelPerUnit_N": 703000,
+      "thrustVacuumPerUnit_N": 719000,
+      "ispSeaLevel_s": 250,
+      "ispVacuum_s": 260,
+      "ignitionTime_s": 25.0,
+      "burnDuration_s": 49.5,
+      "separationTime_s": 92.0
+    },
+    {
+      "id": "ps2",
+      "name": "PS2 (Vikas Liquid Stage)",
+      "type": "ps2",
+      "propellantName": "UH25 + N2O4 Liquid",
+      "count": 1,
+      "dryMassPerUnit_kg": 5300,
+      "propellantMassPerUnit_kg": 32500,
+      "thrustSeaLevelPerUnit_N": 725000,
+      "thrustVacuumPerUnit_N": 799000,
+      "ispSeaLevel_s": 280,
+      "ispVacuum_s": 293,
+      "ignitionTime_s": 110.0,
+      "burnDuration_s": 152.0,
+      "separationTime_s": 263.2
+    },
+    {
+      "id": "ps3",
+      "name": "PS3 (HPS3 Solid Motor)",
+      "type": "ps3",
+      "propellantName": "HTPB Solid",
+      "count": 1,
+      "dryMassPerUnit_kg": 1050,
+      "propellantMassPerUnit_kg": 3200,
+      "thrustSeaLevelPerUnit_N": 200000,
+      "thrustVacuumPerUnit_N": 240000,
+      "ispSeaLevel_s": 280,
+      "ispVacuum_s": 295,
+      "ignitionTime_s": 264.4,
+      "burnDuration_s": 112.0,
+      "separationTime_s": 580.0
+    },
+    {
+      "id": "ps4",
+      "name": "PS4 (Twin Liquid Engines)",
+      "type": "ps4",
+      "propellantName": "MMH + MON3 Liquid",
+      "count": 1,
+      "dryMassPerUnit_kg": 920,
+      "propellantMassPerUnit_kg": 1369,
+      "thrustSeaLevelPerUnit_N": 9500,
+      "thrustVacuumPerUnit_N": 9500,
+      "ispSeaLevel_s": 300,
+      "ispVacuum_s": 318,
+      "ignitionTime_s": 580.0,
+      "burnDuration_s": 449.8,
+      "separationTime_s": 1035.0
+    }
+  ],
+  "pitchSchedule": [
+    { "time_s": 0.0, "pitchDeg": 90.0 },
+    { "time_s": 10.0, "pitchDeg": 81.0 },
+    { "time_s": 25.0, "pitchDeg": 62.0 },
+    { "time_s": 50.0, "pitchDeg": 44.0 },
+    { "time_s": 70.0, "pitchDeg": 34.0 },
+    { "time_s": 92.0, "pitchDeg": 28.0 },
+    { "time_s": 110.0, "pitchDeg": 24.0 },
+    { "time_s": 177.0, "pitchDeg": 22.0 },
+    { "time_s": 263.0, "pitchDeg": 25.8 },
+    { "time_s": 376.0, "pitchDeg": 12.3 },
+    { "time_s": 478.0, "pitchDeg": 3.0 },
+    { "time_s": 580.0, "pitchDeg": 0.0 },
+    { "time_s": 800.0, "pitchDeg": 0.0 },
+    { "time_s": 1030.0, "pitchDeg": 0.0 }
+  ],
+  "publishedMilestones": [
+    {
+      "time_s": 69.9,
+      "event": "Ground-lit Strap-ons Separation",
+      "expectedAltitude_km": 24.5,
+      "expectedVelocity_ms": 1400.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 92.0,
+      "event": "Air-lit Strap-ons Separation",
+      "expectedAltitude_km": 41.0,
+      "expectedVelocity_ms": 1890.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 109.8,
+      "event": "PS1 Separation",
+      "expectedAltitude_km": 55.0,
+      "expectedVelocity_ms": 2320.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 176.6,
+      "event": "Payload Fairing Separation",
+      "expectedAltitude_km": 110.0,
+      "expectedVelocity_ms": 3200.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 263.2,
+      "event": "PS2 Separation",
+      "expectedAltitude_km": 175.0,
+      "expectedVelocity_ms": 5380.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 478.4,
+      "event": "PS3 Separation / Coast",
+      "expectedAltitude_km": 390.0,
+      "expectedVelocity_ms": 6450.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    },
+    {
+      "time_s": 1029.8,
+      "event": "PS4 Cutoff / EOS-04 Injection",
+      "expectedAltitude_km": 534.0,
+      "expectedVelocity_ms": 7590.0,
+      "tolerancePct": 5.0,
+      "isPublished": true
+    }
+  ],
+  "provenance": {
+    "sources": {
+      "brochure": "ISRO PSLV-C52 / EOS-04 Official Mission Brochure (Feb 2022)",
+      "bhoonidhi": "National Remote Sensing Centre (NRSC) Bhoonidhi Open Data Portal",
+      "astrodynamics": "WGS84 Ellipsoid & Vis-Viva Classical Orbital Mechanics"
+    },
+    "tags": {
+      "liftoffMass_320t": "REAL",
+      "eos04PayloadMass_1710kg": "REAL",
+      "targetOrbit_529km_SSO": "REAL",
+      "publishedMilestones": "REAL",
+      "bhoonidhiSarMetadata": "REAL",
+      "stagePropellantMasses": "REAL",
+      "stageThrustAndIsp": "REAL",
+      "stageInertMassBalance": "CALIBRATED",
+      "autoGuidancePitchSchedule": "CALIBRATED",
+      "exponentialAtmosphere": "CALIBRATED",
+      "challengeModeWindPresets": "SYNTHETIC",
+      "downrangeSplashdownCorridor": "SYNTHETIC"
+    }
+  },
+  "disclaimer": "2D planar ascent; coastal dogleg maneuver not modelled."
+}
