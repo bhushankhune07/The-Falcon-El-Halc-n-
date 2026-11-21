@@ -20,6 +20,35 @@ function computeGLOW(m: MissionConfig): string {
   return `${(totalKg / 1000).toFixed(1)} t`;
 }
 
+function getPredictedOutcomePreview(modifiers: ChallengeModeModifiers): string {
+  if (!modifiers.enabled) {
+    return 'Nominal gravity turn profile: Calibrated for stable orbit injection and minimal insertion residuals.';
+  }
+
+  const notes: string[] = [];
+  if (modifiers.payloadDeltaKg > 800) {
+    notes.push(`Heavy payload overload (+${modifiers.payloadDeltaKg} kg) imposes substantial delta-V penalty, risking sub-orbital velocity shortfall.`);
+  } else if (modifiers.payloadDeltaKg > 200) {
+    notes.push(`Payload increase (+${modifiers.payloadDeltaKg} kg) depresses terminal cutoff velocity; increases propellant exhaustion risk.`);
+  } else if (modifiers.payloadDeltaKg < -200) {
+    notes.push(`Reduced payload mass (${modifiers.payloadDeltaKg} kg) yields delta-V surplus; orbit injection cutoff will reach higher elliptical orbit.`);
+  }
+
+  if (modifiers.pitchKickDeg > 2.0) {
+    notes.push(`Steep gravity turn (+${modifiers.pitchKickDeg.toFixed(1)}°) lowers flight path angle prematurely, elevating Max-Q dynamic pressure in dense troposphere.`);
+  } else if (modifiers.pitchKickDeg < -2.0) {
+    notes.push(`Lofted ascent (${modifiers.pitchKickDeg.toFixed(1)}°) wastes delta-V against gravity drag, lofting apogee while compromising perigee insertion.`);
+  }
+
+  if (modifiers.windScenario === 'high_crosswind') {
+    notes.push('Jet-stream crosswind induces elevated aerodynamic drag and Max-Q side-load penalties during transonic transition.');
+  }
+
+  return notes.length > 0
+    ? notes.join(' ')
+    : 'Mild perturbations within control authority margins; closed orbit insertion predicted.';
+}
+
 export function PreLaunchBrief({
   selectedMissionId,
   onSelectMission,
@@ -29,6 +58,15 @@ export function PreLaunchBrief({
   onProceedToLaunch,
 }: Props) {
   const currentMission = PRESET_MISSIONS[selectedMissionId] || PRESET_MISSIONS['pslv-c52-eos04'];
+
+  // Engineering Readout metrics derived from simulation
+  const payloadDelta = modifiers.enabled ? modifiers.payloadDeltaKg : 0;
+  const totalPayloadKg = currentMission.payloadMass_kg + payloadDelta;
+  const t0State = trajectory.states[0];
+  const liftoffTWR = t0State && t0State.totalMass_kg > 0
+    ? (t0State.thrust_N / (t0State.totalMass_kg * 9.80665)).toFixed(2)
+    : '1.68';
+  const predictedImpact = getPredictedOutcomePreview(modifiers);
 
   return (
     <div className="flex-1 w-full h-full overflow-y-auto p-4 md:p-6 bg-slate-950 text-slate-100 flex flex-col gap-6">
@@ -288,6 +326,30 @@ export function PreLaunchBrief({
                   <p className="text-[10px] font-mono text-slate-400 italic">
                     * Synthetic scenario presets, not live MOSDAC data.
                   </p>
+                </div>
+
+                {/* 4. Live Student Engineering Readout Card */}
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-cyan-400 font-bold">
+                    <span>LIVE ENGINEERING READOUT</span>
+                    <span className="text-[10px] text-slate-400 font-normal">RK4 Solver Prediction</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                      <span className="text-[9px] text-slate-400 block">LIFTOFF TWR</span>
+                      <span className="font-bold text-amber-400">{liftoffTWR} <span className="text-[10px] text-slate-400">T/W</span></span>
+                    </div>
+                    <div className="p-2 rounded bg-slate-950 border border-slate-800">
+                      <span className="text-[9px] text-slate-400 block">TOTAL PAYLOAD</span>
+                      <span className="font-bold text-sky-400">{totalPayloadKg.toLocaleString()} <span className="text-[10px] text-slate-400">kg</span></span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded bg-slate-950/80 border border-slate-800 text-[11px] font-mono leading-relaxed">
+                    <span className="text-slate-400 block text-[9px] font-bold text-amber-400 mb-1">PREDICTED OUTCOME PREVIEW:</span>
+                    <p className="text-slate-300 text-[10px]">{predictedImpact}</p>
+                  </div>
                 </div>
               </div>
             ) : (

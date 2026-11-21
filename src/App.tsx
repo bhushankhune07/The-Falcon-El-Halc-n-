@@ -249,6 +249,18 @@ export default function App() {
             modifiers={challengeModifiers}
             onBackToBrief={() => setActiveScreen('brief')}
             onBackToLaunch={() => setActiveScreen('launch')}
+            onResetGoldenRun={() => {
+              setChallengeModifiers({
+                enabled: false,
+                payloadDeltaKg: 0,
+                pitchKickDeg: 0,
+                windScenario: 'nominal',
+              });
+              setCurrentTime_s(0);
+              setIsPlaying(true);
+              setCameraMode('pad');
+              setActiveScreen('launch');
+            }}
           />
         )}
       </main>

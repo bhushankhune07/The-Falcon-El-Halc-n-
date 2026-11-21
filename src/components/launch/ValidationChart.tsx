@@ -18,6 +18,7 @@ interface Props {
   currentTime_s: number;
   publishedMilestones: ISROMilestone[];
   mission?: MissionConfig;
+  isGoldenRun?: boolean;
 }
 
 export function ValidationChart({
@@ -25,6 +26,7 @@ export function ValidationChart({
   currentTime_s,
   publishedMilestones,
   mission,
+  isGoldenRun = true,
 }: Props) {
   const [metric, setMetric] = useState<'altitude' | 'velocity'>('altitude');
   const missionName = mission?.name ?? trajectory.mission?.name ?? 'PSLV-C52 / EOS-04';
@@ -98,10 +100,14 @@ export function ValidationChart({
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-xs font-mono font-bold text-white tracking-wider uppercase">
-            {missionName} — FIT RESIDUALS (CALIBRATED TO THESE POINTS)
+            {isGoldenRun
+              ? `${missionName} — FIT RESIDUALS (CALIBRATED TO THESE POINTS)`
+              : `${missionName.toUpperCase()} — FLIGHT TELEMETRY`}
           </h3>
           <p className="text-[10px] font-mono text-slate-400">
-            Model checkpoints calibrated to published ISRO sequence of events
+            {isGoldenRun
+              ? 'Model checkpoints calibrated to published ISRO sequence of events'
+              : 'Simulated Telemetry (Experimental — not validated vs ISRO)'}
           </p>
         </div>
 
@@ -130,8 +136,8 @@ export function ValidationChart({
         </div>
       </div>
 
-      {/* Live Active Milestone Fit Residual Badge */}
-      {currentMilestoneComparison ? (
+      {/* Live Active Milestone Fit Residual Badge (Golden Run only) */}
+      {isGoldenRun && currentMilestoneComparison ? (
         <div className="mb-3 px-3 py-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs font-mono">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -226,14 +232,16 @@ export function ValidationChart({
               isAnimationActive={false}
             />
 
-            {/* Discrete Published ISRO Milestones as Separate Scatter Series */}
-            <Scatter
-              data={milestoneData}
-              dataKey="isroVal"
-              name="Published ISRO Target"
-              fill="#06b6d4"
-              shape="circle"
-            />
+            {/* Discrete Published ISRO Milestones as Separate Scatter Series (Golden Run only) */}
+            {isGoldenRun ? (
+              <Scatter
+                data={milestoneData}
+                dataKey="isroVal"
+                name="Published ISRO Target"
+                fill="#06b6d4"
+                shape="circle"
+              />
+            ) : null}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

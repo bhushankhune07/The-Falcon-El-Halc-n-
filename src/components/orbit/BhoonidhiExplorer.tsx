@@ -1,8 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Rectangle, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import { CheckCircle2, AlertTriangle, Database, Radio, Satellite, Layers, Calendar, MapPin, Eye } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Database,
+  Radio,
+  Satellite,
+  Layers,
+  Calendar,
+  MapPin,
+  Eye,
+  Lock,
+  RotateCcw,
+  Download,
+} from 'lucide-react';
 import { TrajectoryResult, ChallengeModeModifiers, MissionConfig } from '../../sim';
+import { exportTelemetryCsv } from '../../utils/csvExport';
 
 // Custom marker icon for scene center
 const sceneCenterIcon = L.divIcon({
@@ -55,6 +69,7 @@ interface Props {
   modifiers: ChallengeModeModifiers;
   onBackToBrief?: () => void;
   onBackToLaunch?: () => void;
+  onResetGoldenRun?: () => void;
 }
 
 function getDynamicDiagnosis(summary: TrajectoryResult['summary'], targetAlt: number): string {
@@ -86,7 +101,12 @@ function getDynamicDiagnosis(summary: TrajectoryResult['summary'], targetAlt: nu
   return parts.length > 0 ? parts.join(' ') : 'Orbital elements did not meet stable circular insertion criteria.';
 }
 
-export function BhoonidhiExplorer({ mission, trajectory }: Props) {
+export function BhoonidhiExplorer({
+  mission,
+  trajectory,
+  onBackToBrief,
+  onResetGoldenRun,
+}: Props) {
   const [bhoonidhi, setBhoonidhi] = useState<BhoonidhiData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -134,52 +154,124 @@ export function BhoonidhiExplorer({ mission, trajectory }: Props) {
     const w = canvas.width;
     const h = canvas.height;
 
-    // Dark radar background (water has very low backscatter = almost black)
-    ctx.fillStyle = '#050b14';
+    // Dark radar ocean / water background (specular low return)
+    ctx.fillStyle = '#030712';
     ctx.fillRect(0, 0, w, h);
 
-    // River channel (Krishna-Godavari delta): Specular reflection = dark sinuous path
-    ctx.strokeStyle = '#020508';
-    ctx.lineWidth = 14;
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.4);
-    ctx.bezierCurveTo(w * 0.3, h * 0.45, w * 0.6, h * 0.35, w, h * 0.6);
-    ctx.stroke();
+    // 1. Agricultural Field Pattern (Krishna-Godavari Basin)
+    const parcelCols = 36;
+    const parcelRows = 20;
+    const pw = w / parcelCols;
+    const ph = h / parcelRows;
 
-    // Sinuous tributary
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.35, h * 0.43);
-    ctx.bezierCurveTo(w * 0.4, h * 0.7, w * 0.5, h * 0.8, w * 0.7, h);
-    ctx.stroke();
+    for (let i = 0; i < parcelCols; i++) {
+      for (let j = 0; j < parcelRows; j++) {
+        const seed = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
+        const parcelType = seed - Math.floor(seed);
 
-    // Agricultural field grid & canopy backscatter (medium to high sigma-0)
-    for (let x = 10; x < w; x += 18) {
-      for (let y = 10; y < h; y += 18) {
-        const isNearRiver = Math.abs(y - (h * 0.4 + (x / w) * h * 0.2)) < 24;
-        if (isNearRiver) continue;
+        let baseVal = 55;
+        if (parcelType < 0.22) baseVal = 38;      // Inundated paddy (-18 dB)
+        else if (parcelType < 0.6) baseVal = 82;  // Vegetated cropland (-12 dB)
+        else if (parcelType < 0.88) baseVal = 125;// Dense sugarcane/canopy (-8 dB)
+        else baseVal = 165;                       // Dry rough soil (-4 dB)
 
-        const val = Math.floor(Math.random() * 140) + 40;
-        ctx.fillStyle = `rgb(${val}, ${val + 10}, ${val + 20})`;
-        ctx.fillRect(x, y, 14, 14);
+        ctx.fillStyle = `rgb(${baseVal}, ${Math.round(baseVal * 1.04)}, ${Math.round(baseVal * 1.08)})`;
+        ctx.fillRect(i * pw + 0.5, j * ph + 0.5, pw - 1, ph - 1);
       }
     }
 
-    // Urban / Corner reflector bright points (high double-bounce returns)
+    // 2. High-resolution SAR speckle noise (Rayleigh fading texture)
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    for (let p = 0; p < data.length; p += 4) {
+      const u = Math.max(0.001, Math.random());
+      const speckle = -Math.log(u);
+      const factor = 0.65 + speckle * 0.35;
+      data[p] = Math.min(255, Math.round(data[p] * factor));
+      data[p + 1] = Math.min(255, Math.round(data[p + 1] * factor));
+      data[p + 2] = Math.min(255, Math.round(data[p + 2] * factor));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // 3. Krishna-Godavari River Channel & Tributaries (Specular reflection = very dark)
+    ctx.strokeStyle = '#020610';
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.38);
+    ctx.bezierCurveTo(w * 0.28, h * 0.44, w * 0.55, h * 0.32, w, h * 0.54);
+    ctx.stroke();
+
+    // Sinuous delta distributary
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.32, h * 0.41);
+    ctx.bezierCurveTo(w * 0.38, h * 0.68, w * 0.5, h * 0.82, w * 0.72, h);
+    ctx.stroke();
+
+    // 4. Urban / Corner Reflector Double-Bounce (High Intensity Bright Clusters)
     ctx.fillStyle = '#ffffff';
-    for (let i = 0; i < 35; i++) {
-      const rx = Math.random() * w;
-      const ry = Math.random() * h;
-      ctx.fillRect(rx, ry, 3, 3);
+    for (let b = 0; b < 60; b++) {
+      const bx = (b * 97) % (w - 20) + 10;
+      const by = (b * 67) % (h - 20) + 10;
+      ctx.fillRect(bx, by, 3, 3);
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.4)';
+      ctx.fillRect(bx - 1, by - 1, 5, 5);
+      ctx.fillStyle = '#ffffff';
     }
 
-    // Burn SYNTHETIC ILLUSTRATION — NOT EOS-04 DATA onto the canvas (Item A3)
+    // 5. Subtle Azimuth / Range Grid Coordinate Marks
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+    ctx.lineWidth = 1;
+    for (let gx = 100; gx < w; gx += 100) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, h);
+      ctx.stroke();
+    }
+    for (let gy = 80; gy < h; gy += 80) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(w, gy);
+      ctx.stroke();
+    }
+
+    // 6. Radiometric dB Scale Bar (-25 dB to 0 dB)
+    const barX = 14;
+    const barY = h - 28;
+    const barW = 160;
+    const barH = 8;
+    const dbGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    dbGrad.addColorStop(0, '#030712');   // -25 dB
+    dbGrad.addColorStop(0.3, '#1e3a5f'); // -18 dB
+    dbGrad.addColorStop(0.6, '#475569'); // -12 dB
+    dbGrad.addColorStop(0.85, '#94a3b8');// -6 dB
+    dbGrad.addColorStop(1, '#f8fafc');   // 0 dB
+    ctx.fillStyle = dbGrad;
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // Scale bar labels
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.font = '8px monospace';
+    ctx.fillText('-25 dB', barX, barY - 4);
+    ctx.fillText('-12 dB', barX + barW * 0.45, barY - 4);
+    ctx.fillText('0 dB', barX + barW - 14, barY - 4);
+
+    // 7. Watermark and Metadata Captions
     ctx.fillStyle = 'rgba(245, 158, 11, 0.95)';
     ctx.font = 'bold 11px monospace';
-    ctx.fillText('SYNTHETIC ILLUSTRATION — NOT EOS-04 DATA', 12, 22);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText('SYNTHETIC ILLUSTRATION — NOT EOS-04 DATA', 14, 22);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = '10px monospace';
-    ctx.fillText('Krishna-Godavari Basin Swath Illustration', 12, 38);
+    ctx.fillText('Krishna-Godavari Basin // C-SAR MRS Dual-Pol (HH+HV)', 14, 38);
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.85)';
+    ctx.font = '9px monospace';
+    ctx.fillText('Swath: 115 km | Resolution: 25m | Incidence: ~35°', 14, 52);
   }, [bhoonidhi, isEOS04]);
 
   if (loading) {
@@ -247,24 +339,35 @@ export function BhoonidhiExplorer({ mission, trajectory }: Props) {
             </p>
           </div>
 
-          {/* Orbit Cutoff Telemetry Summary Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">CUTOFF ALTITUDE</span>
-              <span className="font-bold text-amber-400">{summary.finalAltitude_km.toFixed(1)} km</span>
+          {/* Orbit Cutoff Telemetry Summary Pills & CSV Export */}
+          <div className="flex flex-col items-end gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">CUTOFF ALTITUDE</span>
+                <span className="font-bold text-amber-400">{summary.finalAltitude_km.toFixed(1)} km</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">CUTOFF VELOCITY</span>
+                <span className="font-bold text-sky-400">{summary.finalVelocity_ms.toFixed(0)} m/s</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">PERIGEE</span>
+                <span className="font-bold text-emerald-400">{summary.finalPerigee_km.toFixed(1)} km</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">ECCENTRICITY</span>
+                <span className="font-bold text-purple-400">{summary.finalEccentricity.toFixed(4)}</span>
+              </div>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">CUTOFF VELOCITY</span>
-              <span className="font-bold text-sky-400">{summary.finalVelocity_ms.toFixed(0)} m/s</span>
-            </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">PERIGEE</span>
-              <span className="font-bold text-emerald-400">{summary.finalPerigee_km.toFixed(1)} km</span>
-            </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">ECCENTRICITY</span>
-              <span className="font-bold text-purple-400">{summary.finalEccentricity.toFixed(4)}</span>
-            </div>
+
+            <button
+              onClick={() => exportTelemetryCsv(trajectory, mission.name)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white font-mono text-xs transition-colors self-end"
+              title="Download full trajectory telemetry table as CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export Telemetry CSV</span>
+            </button>
           </div>
         </div>
       ) : (
@@ -289,30 +392,42 @@ export function BhoonidhiExplorer({ mission, trajectory }: Props) {
             </p>
           </div>
 
-          {/* Orbit Cutoff Telemetry Summary Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">CUTOFF ALTITUDE</span>
-              <span className="font-bold text-amber-400">{summary.finalAltitude_km.toFixed(1)} km</span>
+          {/* Orbit Cutoff Telemetry Summary Pills & CSV Export */}
+          <div className="flex flex-col items-end gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">CUTOFF ALTITUDE</span>
+                <span className="font-bold text-amber-400">{summary.finalAltitude_km.toFixed(1)} km</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">CUTOFF VELOCITY</span>
+                <span className="font-bold text-sky-400">{summary.finalVelocity_ms.toFixed(0)} m/s</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">PERIGEE</span>
+                <span className="font-bold text-emerald-400">{summary.finalPerigee_km.toFixed(1)} km</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] text-slate-400 block">ECCENTRICITY</span>
+                <span className="font-bold text-purple-400">{summary.finalEccentricity.toFixed(4)}</span>
+              </div>
             </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">CUTOFF VELOCITY</span>
-              <span className="font-bold text-sky-400">{summary.finalVelocity_ms.toFixed(0)} m/s</span>
-            </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">PERIGEE</span>
-              <span className="font-bold text-emerald-400">{summary.finalPerigee_km.toFixed(1)} km</span>
-            </div>
-            <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800">
-              <span className="text-[10px] text-slate-400 block">ECCENTRICITY</span>
-              <span className="font-bold text-purple-400">{summary.finalEccentricity.toFixed(4)}</span>
-            </div>
+
+            <button
+              onClick={() => exportTelemetryCsv(trajectory, mission.name)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white font-mono text-xs transition-colors self-end"
+              title="Download full trajectory telemetry table as CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export Telemetry CSV</span>
+            </button>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
       {/* 2. EOS-04 BHOONIDHI EXPLORER (GATED TO EOS-04 ONLY, B6)  */}
+      {/* Gated on orbitAchieved === true                          */}
       {/* ======================================================== */}
       {!isEOS04 ? (
         <div className="p-12 rounded-xl bg-slate-900/40 border border-slate-800 text-center font-mono text-sm text-slate-400 space-y-2">
@@ -323,6 +438,41 @@ export function BhoonidhiExplorer({ mission, trajectory }: Props) {
           <p className="text-xs text-slate-500 max-w-md mx-auto">
             Select the PSLV-C52 / EOS-04 Golden Path in the Pre-Launch Brief to explore Bhoonidhi C-band SAR radar swaths over India.
           </p>
+        </div>
+      ) : !isOrbitSuccessful ? (
+        <div className="relative p-10 rounded-xl bg-slate-900/60 border border-red-500/40 shadow-2xl overflow-hidden flex flex-col items-center justify-center text-center gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-red-950/80 border border-red-500/50 flex items-center justify-center shadow-lg shadow-red-950/60 text-red-400">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2 max-w-lg">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-mono font-bold tracking-wider">
+              <span>PAYLOAD DEPLOYMENT LOCKED</span>
+            </div>
+            <h3 className="text-xl font-extrabold text-white">
+              Satellite Failed to Reach Stable Orbit
+            </h3>
+            <p className="text-xs text-slate-300 font-mono leading-relaxed">
+              PAYLOAD DEPLOYMENT LOCKED — Satellite failed to reach stable orbit. Adjust Challenge Mode parameters or re-fly Auto-Guidance to unlock First Pixel.
+            </p>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              onClick={onResetGoldenRun}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-mono font-bold text-xs shadow-lg shadow-orange-950/60 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Re-fly Golden Run</span>
+            </button>
+            <button
+              onClick={onBackToBrief}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-mono text-xs transition-colors"
+            >
+              <span>Back to Mission Brief</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

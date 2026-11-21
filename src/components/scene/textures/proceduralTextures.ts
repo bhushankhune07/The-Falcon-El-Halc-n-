@@ -12,7 +12,7 @@ let cachedSolarPanelTexture: THREE.CanvasTexture | null = null;
 let cachedRadarTexture: THREE.CanvasTexture | null = null;
 
 /**
- * Procedural Earth Texture with high-fidelity Indian subcontinent & Sriharikota beacon
+ * Procedural Earth Texture with high-fidelity Indian subcontinent, continental bathymetry & Sriharikota beacon
  */
 export function getProceduralEarthTexture(): THREE.CanvasTexture {
   if (cachedEarthTexture) return cachedEarthTexture;
@@ -24,13 +24,13 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // 1. Deep Ocean Base with Depth Variations
+  // 1. Realistic Bathymetry Ocean Base (abyssal blue #020914 to shelf cyan/blue #104a7a)
   const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
-  oceanGrad.addColorStop(0, '#040d1a'); // Arctic deep blue
-  oceanGrad.addColorStop(0.3, '#0b2347');
-  oceanGrad.addColorStop(0.5, '#0e2e5c'); // Tropical ocean
-  oceanGrad.addColorStop(0.7, '#0b2347');
-  oceanGrad.addColorStop(1, '#040d1a'); // Antarctic deep blue
+  oceanGrad.addColorStop(0, '#020914');    // Arctic abyssal deep
+  oceanGrad.addColorStop(0.18, '#051833'); // Sub-polar deep ocean
+  oceanGrad.addColorStop(0.5, '#09254c');  // Tropical deep ocean
+  oceanGrad.addColorStop(0.82, '#051833'); // Southern ocean
+  oceanGrad.addColorStop(1, '#020914');    // Antarctic abyssal deep
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, width, height);
 
@@ -40,122 +40,293 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   const toX = (lon: number) => ((lon + 180) / 360) * width;
   const toY = (lat: number) => ((90 - lat) / 180) * height;
 
-  // 2. Global Continents (Rough Realistic Shapes)
-  ctx.fillStyle = '#26422b'; // Land vegetation tone
-
-  // Eurasia & Africa broad landmass
+  // 2. Continental Shelf Shallow Marine Shading (Cyan-Blue #104a7a)
+  ctx.fillStyle = '#0f416b';
+  // Indian Ocean & Bay of Bengal shelf
   ctx.beginPath();
-  // Africa
-  ctx.ellipse(toX(20), toY(5), toX(15) - toX(0), toY(0) - toY(30), 0.1, 0, Math.PI * 2);
+  ctx.ellipse(toX(82), toY(15), toX(12) - toX(0), toY(0) - toY(15), 0, 0, Math.PI * 2);
+  ctx.ellipse(toX(73), toY(16), toX(9) - toX(0), toY(0) - toY(12), 0, 0, Math.PI * 2);
+  // Red Sea & Persian Gulf shallow base
+  ctx.ellipse(toX(45), toY(22), toX(9) - toX(0), toY(0) - toY(10), 0.5, 0, Math.PI * 2);
+  // SE Asia shelf
+  ctx.ellipse(toX(105), toY(10), toX(14) - toX(0), toY(0) - toY(14), 0, 0, Math.PI * 2);
+  // Mediterranean shallow base
+  ctx.ellipse(toX(20), toY(35), toX(16) - toX(0), toY(0) - toY(6), 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Europe & Northern Asia
-  ctx.beginPath();
-  ctx.ellipse(toX(60), toY(55), toX(50) - toX(0), toY(0) - toY(18), 0, 0, Math.PI * 2);
-  ctx.fill();
+  // 3. Global Landmasses (Sharp, Recognizable Continental Outlines)
+  ctx.fillStyle = '#223824'; // Base continental land vegetation tone
 
-  // Americas
+  // A. AFRICA
   ctx.beginPath();
-  ctx.ellipse(toX(-100), toY(45), toX(25) - toX(0), toY(0) - toY(20), -0.2, 0, Math.PI * 2);
-  ctx.ellipse(toX(-60), toY(-15), toX(18) - toX(0), toY(0) - toY(25), 0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Australia
-  ctx.beginPath();
-  ctx.ellipse(toX(135), toY(-25), toX(15) - toX(0), toY(0) - toY(12), 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 3. Indian Subcontinent (High Detail)
-  // Distinctive peninsular triangle, Bay of Bengal, Arabian Sea
-  ctx.fillStyle = '#3a6639';
-  ctx.beginPath();
-  ctx.moveTo(toX(68), toY(24));  // Gujarat / Rann of Kutch
-  ctx.lineTo(toX(72), toY(21));  // Kathiawar
-  ctx.lineTo(toX(73), toY(19));  // Mumbai coast
-  ctx.lineTo(toX(75), toY(14));  // Goa / Karnataka coast
-  ctx.lineTo(toX(77), toY(8.1)); // Kanyakumari (Cape Comorin)
-  ctx.lineTo(toX(80), toY(13));  // Tamil Nadu coast (near Chennai)
-  ctx.lineTo(toX(80.2), toY(13.7)); // Sriharikota
-  ctx.lineTo(toX(82.5), toY(17)); // Andhra Pradesh coast
-  ctx.lineTo(toX(87), toY(21.5)); // Odisha / Bengal coast
-  ctx.lineTo(toX(89), toY(22));  // Sunderbans / Ganges delta
-  ctx.lineTo(toX(92), toY(26));  // Northeast / Assam
-  ctx.lineTo(toX(88), toY(28));  // Sikkim
-  ctx.lineTo(toX(82), toY(30));  // Nepal border
-  ctx.lineTo(toX(75), toY(35));  // Kashmir / Himalayas
-  ctx.lineTo(toX(71), toY(30));  // Punjab
-  ctx.lineTo(toX(70), toY(25));  // Rajasthan
+  ctx.moveTo(toX(-5), toY(36));   // Gibraltar / Morocco
+  ctx.lineTo(toX(11), toY(37));   // Tunisia / Carthage
+  ctx.lineTo(toX(32), toY(31));   // Egypt / Nile Delta
+  ctx.lineTo(toX(34), toY(27));   // Sinai
+  ctx.lineTo(toX(37), toY(22));   // Sudan Red Sea coast
+  ctx.lineTo(toX(43), toY(12));   // Bab-el-Mandeb
+  ctx.lineTo(toX(51), toY(10));   // Horn of Africa (Somalia)
+  ctx.lineTo(toX(41), toY(-4));   // Kenya / Mombasa
+  ctx.lineTo(toX(35), toY(-18));  // Mozambique
+  ctx.lineTo(toX(28), toY(-33));  // South Africa (East)
+  ctx.lineTo(toX(18), toY(-34));  // Cape of Good Hope
+  ctx.lineTo(toX(12), toY(-16));  // Namibia / Angola
+  ctx.lineTo(toX(9), toY(4));     // Gulf of Guinea / Cameroon
+  ctx.lineTo(toX(2), toY(6));     // Nigeria / Ghana
+  ctx.lineTo(toX(-14), toY(11));  // Guinea
+  ctx.lineTo(toX(-17), toY(15));  // Dakar / Senegal
+  ctx.lineTo(toX(-13), toY(28));  // Mauritania / Western Sahara
   ctx.closePath();
   ctx.fill();
 
-  // Deccan plateau shading
-  ctx.fillStyle = '#4f4a30';
+  // B. ARABIAN PENINSULA
+  ctx.fillStyle = '#3f3a28'; // Arid desert tone
   ctx.beginPath();
-  ctx.ellipse(toX(77), toY(17), toX(4) - toX(0), toY(0) - toY(5), 0, 0, Math.PI * 2);
+  ctx.moveTo(toX(35), toY(28));  // Aqaba
+  ctx.lineTo(toX(43), toY(13));  // Bab-el-Mandeb
+  ctx.lineTo(toX(52), toY(14));  // Yemen / Aden
+  ctx.lineTo(toX(59), toY(22));  // Oman / Ras al Hadd
+  ctx.lineTo(toX(56), toY(26));  // Strait of Hormuz
+  ctx.lineTo(toX(48), toY(30));  // Persian Gulf / Kuwait
+  ctx.closePath();
   ctx.fill();
 
-  // Sri Lanka
-  ctx.fillStyle = '#2f5a31';
+  // C. EUROPE & EURASIA
+  ctx.fillStyle = '#273e28';
   ctx.beginPath();
-  ctx.ellipse(toX(80.8), toY(7.8), toX(1.4) - toX(0), toY(0) - toY(2.2), 0.2, 0, Math.PI * 2);
+  // Iberia
+  ctx.moveTo(toX(-9), toY(37));
+  ctx.lineTo(toX(-9), toY(43));
+  ctx.lineTo(toX(0), toY(43));
+  // France / Central Europe
+  ctx.lineTo(toX(5), toY(50));
+  ctx.lineTo(toX(15), toY(55));
+  ctx.lineTo(toX(28), toY(60));  // Baltic / Scandinavia
+  ctx.lineTo(toX(40), toY(65));  // Northern Russia
+  ctx.lineTo(toX(80), toY(72));  // Siberia
+  ctx.lineTo(toX(130), toY(70));
+  ctx.lineTo(toX(145), toY(55)); // Kamchatka
+  ctx.lineTo(toX(130), toY(42)); // Vladivostok
+  ctx.lineTo(toX(120), toY(35)); // Northern China
+  ctx.lineTo(toX(105), toY(32)); // Central China
+  ctx.lineTo(toX(85), toY(36));  // Central Asia
+  ctx.lineTo(toX(60), toY(42));  // Caspian Sea north
+  ctx.lineTo(toX(40), toY(44));  // Black Sea north
+  ctx.lineTo(toX(26), toY(40));  // Greece / Balkans
+  ctx.lineTo(toX(16), toY(41));  // Italy
+  ctx.lineTo(toX(12), toY(44));
+  ctx.lineTo(toX(3), toY(43));
+  ctx.closePath();
   ctx.fill();
 
-  // Himalayan snow arc
-  ctx.strokeStyle = '#e6f0ff';
-  ctx.lineWidth = 6;
+  // D. AMERICAS & AUSTRALIA
   ctx.beginPath();
-  ctx.moveTo(toX(74), toY(35));
-  ctx.quadraticCurveTo(toX(82), toY(30), toX(93), toY(28));
+  // North America
+  ctx.ellipse(toX(-100), toY(45), toX(28) - toX(0), toY(0) - toY(18), -0.15, 0, Math.PI * 2);
+  // South America
+  ctx.ellipse(toX(-60), toY(-18), toX(18) - toX(0), toY(0) - toY(26), 0.2, 0, Math.PI * 2);
+  // Australia
+  ctx.ellipse(toX(134), toY(-25), toX(16) - toX(0), toY(0) - toY(12), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // E. SOUTHEAST ASIA & EAST ASIA
+  ctx.fillStyle = '#224424';
+  ctx.beginPath();
+  ctx.moveTo(toX(92), toY(22));   // Bangladesh / Myanmar border
+  ctx.lineTo(toX(94), toY(16));   // Irrawaddy Delta
+  ctx.lineTo(toX(98), toY(10));   // Andaman coast / Phuket
+  ctx.lineTo(toX(103), toY(1.5)); // Singapore
+  ctx.lineTo(toX(104), toY(6));   // East coast Malaysia
+  ctx.lineTo(toX(101), toY(13));  // Gulf of Thailand / Bangkok
+  ctx.lineTo(toX(105), toY(10));  // Mekong Delta / Vietnam
+  ctx.lineTo(toX(109), toY(14));  // Da Nang
+  ctx.lineTo(toX(108), toY(21));  // Gulf of Tonkin
+  ctx.lineTo(toX(115), toY(22));  // Hong Kong / Guangdong
+  ctx.lineTo(toX(121), toY(31));  // Shanghai
+  ctx.lineTo(toX(105), toY(28));  // Interior
+  ctx.closePath();
+  ctx.fill();
+
+  // Major Indonesian Archipelago Islands
+  // Sumatra
+  ctx.beginPath();
+  ctx.ellipse(toX(101), toY(0), toX(4) - toX(0), toY(0) - toY(1.6), -0.7, 0, Math.PI * 2);
+  ctx.fill();
+  // Java
+  ctx.beginPath();
+  ctx.ellipse(toX(110), toY(-7.5), toX(4.5) - toX(0), toY(0) - toY(1.2), 0.05, 0, Math.PI * 2);
+  ctx.fill();
+  // Borneo
+  ctx.beginPath();
+  ctx.ellipse(toX(114), toY(1), toX(3.5) - toX(0), toY(0) - toY(3.5), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // F. HIGH-FIDELITY INDIAN SUBCONTINENT
+  // Detailed peninsular triangle, Gujarat / Kathiawar, Mumbai, Kerala, Coromandel, Krishna-Godavari arc, Odisha, Sunderbans
+  ctx.fillStyle = '#345e32'; // Lush Indian peninsula base
+  ctx.beginPath();
+  ctx.moveTo(toX(68.5), toY(24.0)); // Kutch / Sir Creek
+  ctx.lineTo(toX(70.0), toY(22.8)); // Saurashtra / Kathiawar north
+  ctx.lineTo(toX(69.2), toY(21.5)); // Dwarka
+  ctx.lineTo(toX(71.0), toY(20.7)); // Diu / Gir south point
+  ctx.lineTo(toX(72.2), toY(21.7)); // Gulf of Khambhat / Surat
+  ctx.lineTo(toX(72.8), toY(19.0)); // Mumbai / Konkan coast
+  ctx.lineTo(toX(73.8), toY(15.5)); // Goa
+  ctx.lineTo(toX(74.8), toY(13.0)); // Mangaluru / Karnataka coast
+  ctx.lineTo(toX(76.2), toY(9.9));  // Kochi / Kerala coast
+  ctx.lineTo(toX(77.5), toY(8.1));  // Kanyakumari (Cape Comorin tip)
+  ctx.lineTo(toX(78.2), toY(9.2));  // Gulf of Mannar
+  ctx.lineTo(toX(79.8), toY(10.3)); // Point Calimere / Palk Strait
+  ctx.lineTo(toX(80.2), toY(13.0)); // Chennai
+  ctx.lineTo(toX(80.23), toY(13.72)); // SRIHARIKOTA ISLAND (SHAR)
+  ctx.lineTo(toX(80.6), toY(15.8)); // Ongole
+  ctx.lineTo(toX(82.2), toY(16.9)); // Krishna-Godavari Delta Arc
+  ctx.lineTo(toX(83.3), toY(17.7)); // Visakhapatnam
+  ctx.lineTo(toX(85.3), toY(19.8)); // Odisha coast / Puri
+  ctx.lineTo(toX(87.0), toY(21.5)); // Balasore
+  ctx.lineTo(toX(88.5), toY(22.0)); // Sunderbans delta west
+  ctx.lineTo(toX(91.0), toY(22.5)); // Sunderbans delta east
+  ctx.lineTo(toX(92.5), toY(25.0)); // Meghalaya / Assam
+  ctx.lineTo(toX(95.0), toY(28.0)); // Arunachal Pradesh
+  ctx.lineTo(toX(88.5), toY(27.8)); // Sikkim / Bhutan
+  ctx.lineTo(toX(84.0), toY(28.5)); // Nepal border
+  ctx.lineTo(toX(79.0), toY(31.0)); // Uttarakhand / Himalayas
+  ctx.lineTo(toX(74.5), toY(34.5)); // Kashmir
+  ctx.lineTo(toX(71.5), toY(31.0)); // Punjab
+  ctx.lineTo(toX(70.0), toY(26.5)); // Thar desert / Rajasthan
+  ctx.closePath();
+  ctx.fill();
+
+  // Deccan Plateau Interior Shading
+  ctx.fillStyle = '#4a442a'; // Semi-arid Deccan plateau
+  ctx.beginPath();
+  ctx.ellipse(toX(76.5), toY(16.5), toX(4) - toX(0), toY(0) - toY(4.5), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thar Desert Shading
+  ctx.fillStyle = '#5c5235';
+  ctx.beginPath();
+  ctx.ellipse(toX(72.0), toY(27.0), toX(3) - toX(0), toY(0) - toY(2.5), -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sri Lanka (Distinct Teardrop shape at 7.8°N, 80.8°E)
+  ctx.fillStyle = '#2c582e';
+  ctx.beginPath();
+  ctx.ellipse(toX(80.7), toY(7.8), toX(1.3) - toX(0), toY(0) - toY(2.1), 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Snow-capped Himalayan Ridge (#f8fafc)
+  ctx.strokeStyle = '#f8fafc';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(toX(73.5), toY(35.0));
+  ctx.quadraticCurveTo(toX(82.0), toY(29.8), toX(95.0), toY(28.0));
   ctx.stroke();
 
-  // 4. SDSC Sriharikota Launch Site Beacon (13.72° N, 80.23° E)
+  // Additional Tibetan snow glaciated peaks
+  ctx.strokeStyle = 'rgba(248, 250, 252, 0.7)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(toX(76.0), toY(36.0));
+  ctx.lineTo(toX(88.0), toY(32.0));
+  ctx.stroke();
+
+  // 4. Subtle Latitude & Longitude Graticule Lines (every 30° lat/lon)
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+  ctx.lineWidth = 1;
+
+  // Parallels (-60, -30, 0, 30, 60)
+  for (const lat of [-60, -30, 0, 30, 60]) {
+    ctx.beginPath();
+    ctx.moveTo(0, toY(lat));
+    ctx.lineTo(width, toY(lat));
+    ctx.stroke();
+  }
+
+  // Meridians (-150 to +150 step 30)
+  for (let lon = -150; lon <= 150; lon += 30) {
+    ctx.beginPath();
+    ctx.moveTo(toX(lon), 0);
+    ctx.lineTo(toX(lon), height);
+    ctx.stroke();
+  }
+
+  // Highlighted Equator (0° Latitude)
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, toY(0));
+  ctx.lineTo(width, toY(0));
+  ctx.stroke();
+
+  // Highlighted 80.23° E Meridian (Sriharikota Launch Corridor)
   const sharX = toX(80.23);
   const sharY = toY(13.72);
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(sharX, 0);
+  ctx.lineTo(sharX, height);
+  ctx.stroke();
+  ctx.setLineDash([]); // Reset dash
 
-  // Concentric beacon rings
-  ctx.strokeStyle = 'rgba(255, 170, 0, 0.4)';
+  // 5. High-Resolution SDSC Sriharikota Launch Site Marker (13.72° N, 80.23° E)
+  // Outer glowing pulse rings
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(sharX, sharY, 14, 0, Math.PI * 2);
+  ctx.arc(sharX, sharY, 20, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(255, 210, 80, 0.7)';
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.arc(sharX, sharY, 7, 0, Math.PI * 2);
+  ctx.arc(sharX, sharY, 11, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.fillStyle = '#ff3300';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(sharX, sharY, 5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Central incandescent launchpad beacon
+  ctx.fillStyle = '#ef4444';
   ctx.beginPath();
   ctx.arc(sharX, sharY, 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // 5. Procedural Swirling Clouds Layer
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-  for (let i = 0; i < 45; i++) {
-    const cx = (i * 47) % width;
-    const cy = toY(-40 + ((i * 19) % 80));
-    const rx = 35 + ((i * 13) % 70);
-    const ry = 8 + ((i * 7) % 18);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(sharX, sharY, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beacon Annotation
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
+  ctx.font = 'bold 11px monospace';
+  ctx.fillText('SDSC SHAR (13.7°N, 80.2°E)', sharX + 14, sharY + 4);
+
+  // 6. Realistic Procedural Wispy Atmosphere & Cloud Swirls
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+  for (let i = 0; i < 50; i++) {
+    const cx = (i * 43) % width;
+    const cy = toY(-35 + ((i * 17) % 70));
+    const rx = 30 + ((i * 11) % 65);
+    const ry = 7 + ((i * 5) % 15);
     ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry, 0.15, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, rx, ry, 0.12, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // 6. Subtle Latitude & Longitude Reference Lines
-  ctx.strokeStyle = 'rgba(100, 150, 255, 0.08)';
-  ctx.lineWidth = 1;
-  // Equator
-  ctx.beginPath();
-  ctx.moveTo(0, height / 2);
-  ctx.lineTo(width, height / 2);
-  ctx.stroke();
-
-  // 80° E meridian (Sriharikota downrange corridor)
-  ctx.strokeStyle = 'rgba(255, 180, 50, 0.15)';
-  ctx.beginPath();
-  ctx.moveTo(toX(80.23), 0);
-  ctx.lineTo(toX(80.23), height);
-  ctx.stroke();
+  // Intertropical Convergence Zone (ITCZ) equatorial cloud filament
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  for (let lon = -160; lon <= 160; lon += 40) {
+    ctx.beginPath();
+    ctx.ellipse(toX(lon), toY(4), 85, 12, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;

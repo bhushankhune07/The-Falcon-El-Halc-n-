@@ -22,26 +22,16 @@ export function TelemetrySidebar({
   return (
     <div className="flex flex-col h-full w-full gap-4 overflow-y-auto pr-1">
       {/* ======================================================== */}
-      {/* 1. FIT RESIDUALS CHART (PSLV-C52 ONLY; HIDDEN FOR C25/C57) */}
+      {/* 1. FIT RESIDUALS / FLIGHT TELEMETRY CHART                */}
       {/* ======================================================== */}
       <div className="flex-none h-[300px]">
-        {isGoldenRun ? (
-          <ValidationChart
-            trajectory={trajectory}
-            currentTime_s={t}
-            mission={mission}
-            publishedMilestones={publishedMilestones}
-          />
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center p-6 rounded-xl bg-slate-900/60 border border-amber-500/30 text-center space-y-2.5">
-            <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              EXPERIMENTAL — launch-phase model, not validated vs ISRO
-            </span>
-            <p className="text-xs font-mono text-slate-400 max-w-xs leading-relaxed">
-              Model fit residuals and milestone comparison scatter series are available for PSLV-C52 Golden Run only.
-            </p>
-          </div>
-        )}
+        <ValidationChart
+          trajectory={trajectory}
+          currentTime_s={t}
+          mission={mission}
+          publishedMilestones={publishedMilestones}
+          isGoldenRun={isGoldenRun}
+        />
       </div>
 
       {/* ======================================================== */}

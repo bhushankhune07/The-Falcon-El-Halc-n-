@@ -12,7 +12,7 @@ interface Props {
 export function ExhaustPlume({ simFrame, stages }: Props) {
   const solidPlumeRef = useRef<THREE.Group>(null);
   const liquidPlumeRef = useRef<THREE.Group>(null);
-  const padSmokeRef = useRef<THREE.Mesh>(null);
+  const padSmokeRef = useRef<THREE.Group>(null);
 
   const t = simFrame.time_s;
   const isThrusting = simFrame.thrust_N > 1000;
@@ -39,6 +39,10 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
     (t >= ps2Ign && t < ps2BurnEnd) ||
     (t >= ps4Ign && t < ps4BurnEnd && !simFrame.ps4Cutoff);
 
+  // Active stage nozzle positions relative to rocket group
+  const solidY = (t >= ps3Ign && t < ps3BurnEnd) ? 33.0 : -1.2;
+  const liquidY = (t >= ps4Ign) ? 37.35 : 20.0;
+
   // Plume vacuum expansion factor (flares wider at high altitude)
   const vacExpansion = Math.min(2.5, 1.0 + simFrame.altitude_m / 60000.0);
 
@@ -50,6 +54,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
     const flicker = 0.9 + Math.sin(t * 45.0) * 0.08 + Math.cos(t * 70.0) * 0.04;
 
     if (solidPlumeRef.current) {
+      solidPlumeRef.current.position.y = solidY;
       const targetScaleY = isSolidActive && isThrusting ? throttle * flicker * 12.0 : 0.001;
       const targetScaleXZ = isSolidActive && isThrusting ? flicker * vacExpansion : 0.001;
 
@@ -59,6 +64,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
     }
 
     if (liquidPlumeRef.current) {
+      liquidPlumeRef.current.position.y = liquidY;
       const targetScaleY = isLiquidActive && isThrusting ? (0.6 + throttle * 0.8) * flicker * 9.0 : 0.001;
       const targetScaleXZ = isLiquidActive && isThrusting ? flicker * vacExpansion * 1.2 : 0.001;
 
@@ -67,17 +73,21 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(liquidPlumeRef.current.scale.z, targetScaleXZ, 15, delta);
     }
 
-    // Pad liftoff smoke expansion (T+0 to T+10s)
+    // Pad liftoff smoke expansion (T+0.1s to T+12s) - completely hidden at t <= 0.1
     if (padSmokeRef.current) {
-      if (t >= 0 && t <= 12 && simFrame.altitude_m < 500) {
+      if (t > 0.1 && t <= 12 && simFrame.altitude_m < 600) {
         padSmokeRef.current.visible = true;
-        const smokeScale = 1.0 + t * 2.5;
-        padSmokeRef.current.scale.set(smokeScale, smokeScale * 0.6, smokeScale);
+        const spread = 1.0 + t * 1.6;
+        padSmokeRef.current.scale.set(spread, Math.min(2.5, 0.6 + t * 0.15), spread);
+        // Anchor to ground flame trench level
+        padSmokeRef.current.position.y = -simFrame.altitude_m - 18.0;
       } else {
         padSmokeRef.current.visible = false;
       }
     }
   });
+
+  const padSmokeOpacity = Math.max(0, 0.45 * (1.0 - t / 12.0));
 
   return (
     <group position={[0, -0.5, 0]}>
@@ -85,7 +95,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       {/* SOLID PROPELLANT PLUME (S12 Strap-ons & PS1 / PS3 Core)   */}
       {/* Bright Orange-Gold, fiery, dynamic                       */}
       {/* ======================================================== */}
-      <group ref={solidPlumeRef} position={[0, -2.5, 0]}>
+      <group ref={solidPlumeRef} position={[0, solidY, 0]}>
         {/* Core incandescent hot cone */}
         <mesh position={[0, -1.5, 0]}>
           <coneGeometry args={[0.9, 3.5, 24, 1, true]} />
@@ -127,66 +137,85 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       {/* LIQUID PROPELLANT PLUME (PS2 Vikas & PS4 Twin Engines)   */}
       {/* Translucent Cyan-Violet, shock diamonds, high Isp        */}
       {/* ======================================================== */}
-      <group
-        ref={liquidPlumeRef}
-        position={[
-          0,
-          t >= 580 ? 32.5 : 12.0, // Attached to PS4 base (high) or PS2 base
-          0,
-        ]}
-      >
-        {/* Inner high-temp Mach shock core */}
+      <group ref={liquidPlumeRef} position={[0, liquidY, 0]}>
+        {/* Inner bright plasma core */}
         <mesh position={[0, -1.0, 0]}>
-          <cylinderGeometry args={[0.2, 0.6, 2.2, 16]} />
+          <cylinderGeometry args={[0.2, 0.55, 2.2, 16]} />
+          <meshBasicMaterial
+            color="#e0f2fe"
+            transparent
+            opacity={0.95}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+
+        {/* Middle hypergolic shock cone */}
+        <mesh position={[0, -2.0, 0]}>
+          <coneGeometry args={[1.1, 4.2, 20, 1, true]} />
           <meshBasicMaterial
             color="#38bdf8"
             transparent
-            opacity={0.9}
+            opacity={0.75}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        {/* Outer translucent hypergolic plume envelope */}
-        <mesh position={[0, -2.0, 0]}>
-          <coneGeometry args={[1.4, 4.5, 20, 1, true]} />
-          <meshBasicMaterial
-            color="#818cf8"
-            transparent
-            opacity={0.65}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Vacuum flare envelope */}
-        <mesh position={[0, -3.0, 0]}>
-          <coneGeometry args={[2.4, 6.5, 20, 1, true]} />
+        {/* Outer soft vacuum glow envelope */}
+        <mesh position={[0, -3.2, 0]}>
+          <coneGeometry args={[2.0, 6.2, 20, 1, true]} />
           <meshBasicMaterial
             color="#c084fc"
             transparent
-            opacity={0.25}
+            opacity={0.3}
             side={THREE.DoubleSide}
           />
         </mesh>
 
-        <pointLight color="#60a5fa" intensity={3.0} distance={45} decay={2} />
+        <pointLight color="#60a5fa" intensity={3.5} distance={45} decay={2} />
       </group>
 
       {/* ======================================================== */}
-      {/* T-0 TO T+10s LAUNCH PAD EXHAUST BILLOWING GLOW           */}
+      {/* T-0.1 TO T+12s COMPACT GROUND FLAME TRENCH EXHAUST CLOUDS*/}
+      {/* Hidden completely at t <= 0.1                            */}
       {/* ======================================================== */}
-      <mesh
-        ref={padSmokeRef}
-        position={[0, -simFrame.altitude_m - 2.0, 0]}
-        visible={false}
-      >
-        <sphereGeometry args={[18, 16, 12]} />
-        <meshBasicMaterial
-          color="#fed7aa"
-          transparent
-          opacity={Math.max(0, 0.4 - t * 0.035)}
-          wireframe={false}
-        />
-      </mesh>
+      <group ref={padSmokeRef} visible={false}>
+        {/* West flame trench cloud */}
+        <mesh position={[-7, 2, 0]}>
+          <sphereGeometry args={[5, 12, 10]} />
+          <meshBasicMaterial
+            color="#fed7aa"
+            transparent
+            opacity={padSmokeOpacity}
+          />
+        </mesh>
+        {/* East flame trench cloud */}
+        <mesh position={[7, 2, 0]}>
+          <sphereGeometry args={[5, 12, 10]} />
+          <meshBasicMaterial
+            color="#fde047"
+            transparent
+            opacity={padSmokeOpacity * 0.9}
+          />
+        </mesh>
+        {/* South trench cloud */}
+        <mesh position={[0, 2, 8]}>
+          <sphereGeometry args={[4.5, 12, 10]} />
+          <meshBasicMaterial
+            color="#cbd5e1"
+            transparent
+            opacity={padSmokeOpacity * 0.75}
+          />
+        </mesh>
+        {/* North trench cloud */}
+        <mesh position={[0, 2, -8]}>
+          <sphereGeometry args={[4.5, 12, 10]} />
+          <meshBasicMaterial
+            color="#e2e8f0"
+            transparent
+            opacity={padSmokeOpacity * 0.75}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { useState, useEffect, useRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { SimFrameState, CameraMode } from './types';
 import { SceneErrorBoundary } from './ErrorBoundary';
@@ -14,6 +14,34 @@ interface Props {
   onCameraModeChange?: (mode: CameraMode) => void;
 }
 
+/**
+ * CameraManager detects cameraMode and altitude boundary transitions (120 km)
+ * to smoothly frame either the floating-origin rocket or orbital Earth + spacecraft.
+ */
+function CameraManager({ cameraMode, isHigh }: { cameraMode: CameraMode; isHigh: boolean }) {
+  const { camera } = useThree();
+  const prevRef = useRef<{ mode: CameraMode; high: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!prevRef.current || prevRef.current.mode !== cameraMode || prevRef.current.high !== isHigh) {
+      prevRef.current = { mode: cameraMode, high: isHigh };
+      if (cameraMode === 'orbit') {
+        if (isHigh) {
+          // Orbit view above 120km: frame the Earth (radius 60) and satellite cleanly
+          camera.position.set(0, 75, 140);
+          camera.lookAt(0, 0, 0);
+        } else {
+          // Free-orbit around the rocket below 120km: center on rocket at (0, 15, 0)
+          camera.position.set(-25, 20, 45);
+          camera.lookAt(0, 15, 0);
+        }
+      }
+    }
+  }, [cameraMode, isHigh, camera]);
+
+  return null;
+}
+
 export function MissionCanvas({
   simFrame,
   mission,
@@ -24,21 +52,27 @@ export function MissionCanvas({
 
   // Cross-fade threshold around 120 km
   const altKm = simFrame.altitude_m / 1000.0;
+  const isHigh = altKm >= 120.0;
   const isAscentVisible = altKm < 130.0;
   const isOrbitVisible = altKm >= 110.0;
+
+  // Auto-switch to Orbit framing whenever altitude >= 120 km (including clicking 125 km or Orbit Cutoff)
+  useEffect(() => {
+    if (isHigh) {
+      if (cameraMode !== 'orbit' && onCameraModeChange) {
+        onCameraModeChange('orbit');
+      }
+    }
+  }, [isHigh, cameraMode, onCameraModeChange]);
 
   // Show "ENTERING ORBITAL VIEW" badge around 120 km transition
   useEffect(() => {
     if (altKm >= 115.0 && altKm <= 145.0) {
       setShowOrbitBadge(true);
-      // Automatically switch to 'orbit' camera mode if in 'pad' view
-      if (cameraMode === 'pad' && onCameraModeChange) {
-        onCameraModeChange('orbit');
-      }
     } else {
       setShowOrbitBadge(false);
     }
-  }, [altKm, cameraMode, onCameraModeChange]);
+  }, [altKm]);
 
   // Dynamic cross-fade opacities
   let ascentOpacity = 1.0;
@@ -63,20 +97,23 @@ export function MissionCanvas({
             powerPreference: 'high-performance',
           }}
           camera={{
-            position: cameraMode === 'orbit' ? [0, 80, 130] : [-18, 16, 36],
+            position: cameraMode === 'orbit' ? (isHigh ? [0, 75, 140] : [-25, 20, 45]) : [-18, 16, 36],
             fov: 45,
             near: 0.1,
             far: 400000,
           }}
         >
-          {/* Controls: Enable OrbitControls ONLY when cameraMode === 'orbit' (Item D10) */}
+          {/* Manages camera transitions when switching modes or crossing 120 km */}
+          <CameraManager cameraMode={cameraMode} isHigh={isHigh} />
+
+          {/* Controls: Enable OrbitControls ONLY when cameraMode === 'orbit' */}
           <OrbitControls
             enabled={cameraMode === 'orbit'}
             enableDamping
             dampingFactor={0.05}
-            maxDistance={cameraMode === 'orbit' ? 400 : 150}
-            minDistance={cameraMode === 'orbit' ? 65 : 4}
-            target={cameraMode === 'orbit' ? [0, 0, 0] : [0, 20, 0]}
+            maxDistance={isHigh ? 400 : 120}
+            minDistance={isHigh ? 65 : 20}
+            target={isHigh ? [0, 0, 0] : [0, 15, 0]}
           />
 
           {/* ======================================================== */}
