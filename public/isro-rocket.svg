@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <path d="M32 4C24 16 22 28 22 44L32 50L42 44C42 28 40 16 32 4Z" fill="#E2E8F0"/>
+  <path d="M32 4C28 16 27 28 27 44L32 50L37 44C37 28 36 16 32 4Z" fill="#F8FAFC"/>
+  <!-- Payload Fairing Band -->
+  <path d="M26 18C28 15 36 15 38 18L37.5 21H26.5L26 18Z" fill="#FF9933"/>
+  <circle cx="32" cy="12" r="1.5" fill="#FF9933"/>
+  <!-- Strap-ons -->
+  <rect x="18" y="32" width="4" height="16" rx="2" fill="#CBD5E1"/>
+  <rect x="42" y="32" width="4" height="16" rx="2" fill="#CBD5E1"/>
+  <!-- Fins -->
+  <path d="M22 42L14 48L22 47Z" fill="#FF9933"/>
+  <path d="M42 42L50 48L42 47Z" fill="#FF9933"/>
+  <!-- Exhaust Plume -->
+  <path d="M29 50L32 60L35 50Z" fill="#FF5722"/>
+  <path d="M30 50L32 57L34 50Z" fill="#FFEB3B"/>
+</svg>

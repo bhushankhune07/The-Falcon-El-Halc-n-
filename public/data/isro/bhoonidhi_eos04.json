@@ -1,0 +1,51 @@
+{
+  "dataset": "EOS-04 / RISAT-1A C-band SAR",
+  "metadata": {
+    "satellite": "EOS-04",
+    "sensor": "C-SAR",
+    "instrumentMode": "MRS (Medium Resolution ScanSAR)",
+    "productLevel": "Level-2 GeoTIFF / Level-1B SLC",
+    "polarisation": "Dual-Pol (HH + HV)",
+    "band": "C-band (5.35 GHz, λ ≈ 5.6 cm)",
+    "resolution_m": 25.0,
+    "swathWidth_km": 115.0,
+    "incidentAngle_deg": "22.0 - 41.5",
+    "orbitNumber": 1284,
+    "orbitType": "Sun-Synchronous Polar Orbit (SSO)",
+    "orbitAltitude_km": 529.0,
+    "orbitInclination_deg": 97.6,
+    "repeatCycle_days": 17,
+    "acquisitionTimestampUTC": "2022-02-14T01:18:24.000Z",
+    "bhoonidhiProductId": "EOS04_CSAR_MRS_L2_20220214T011824_IN_AP_001",
+    "quicklookUrl": "/data/isro/eos04_quicklook_sample.png",
+    "geographicBounds": {
+      "center": {
+        "latitude": 16.5062,
+        "longitude": 80.6480,
+        "locationName": "Krishna-Godavari Basin, Andhra Pradesh, India"
+      },
+      "boundingBox": {
+        "north": 17.10,
+        "south": 15.90,
+        "west": 80.10,
+        "east": 81.20
+      }
+    },
+    "applications": [
+      "Kharif/Rabi Crop Acreage & Paddy Rice Phenology",
+      "Flood Inundation & Disaster Early Warning (Brahmaputra & Krishna Basins)",
+      "Soil Moisture Index & Surface Hydrology",
+      "Forest Canopy Penetration & Biomass Density Mapping"
+    ],
+    "scientificAdvantages": [
+      "Active microwave illumination operates day & night regardless of cloud cover or monsoon conditions",
+      "5.35 GHz C-band radar interacts with canopy structures and saturated soils for precise moisture distinction",
+      "529 km SSO maintains consistent 06:00/18:00 LTAN ground illumination angles for multi-temporal coherence"
+    ],
+    "calibration": {
+      "sigma0CalibrationConstant_dB": -83.2,
+      "nesz_dB": -22.5,
+      "radiometricAccuracy_dB": 0.85
+    }
+  }
+}
