@@ -14,37 +14,154 @@ function LightningTower({ position }: { position: [number, number, number] }) {
   const segH = 11;
   return (
     <group position={position}>
+      {/* 5-section tapering lattice structure */}
       <mesh position={[0, segH * 0.5, 0]} castShadow>
-        <boxGeometry args={[2.5, segH, 2.5]} />
+        <boxGeometry args={[2.6, segH, 2.6]} />
         <meshStandardMaterial color="#dc2626" roughness={0.5} />
       </mesh>
       <mesh position={[0, segH * 1.5, 0]} castShadow>
-        <boxGeometry args={[2.1, segH, 2.1]} />
+        <boxGeometry args={[2.2, segH, 2.2]} />
         <meshStandardMaterial color="#f8fafc" roughness={0.4} />
       </mesh>
       <mesh position={[0, segH * 2.5, 0]} castShadow>
-        <boxGeometry args={[1.7, segH, 1.7]} />
+        <boxGeometry args={[1.8, segH, 1.8]} />
         <meshStandardMaterial color="#dc2626" roughness={0.5} />
       </mesh>
       <mesh position={[0, segH * 3.5, 0]} castShadow>
-        <boxGeometry args={[1.3, segH, 1.3]} />
+        <boxGeometry args={[1.4, segH, 1.4]} />
         <meshStandardMaterial color="#f8fafc" roughness={0.4} />
       </mesh>
       <mesh position={[0, segH * 4.5, 0]} castShadow>
-        <boxGeometry args={[0.9, segH, 0.9]} />
+        <boxGeometry args={[1.0, segH, 1.0]} />
         <meshStandardMaterial color="#dc2626" roughness={0.5} />
       </mesh>
 
-      {/* Top lightning arrestor needle */}
+      {/* Top lightning arrestor spike */}
       <mesh position={[0, segH * 5 + 4, 0]}>
         <cylinderGeometry args={[0.08, 0.35, 8, 8]} />
         <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.1} />
       </mesh>
 
+      {/* Pulsating red aviation obstruction beacon */}
+      <mesh position={[0, segH * 5 + 8.2, 0]}>
+        <sphereGeometry args={[0.4, 8, 8]} />
+        <meshBasicMaterial color="#ef4444" />
+      </mesh>
+
       {/* Pad illumination floodlight bracket */}
       <mesh position={[0, segH * 3.2, 0]}>
-        <boxGeometry args={[1.8, 0.5, 1.8]} />
+        <boxGeometry args={[2.0, 0.5, 2.0]} />
         <meshStandardMaterial color="#fef08a" emissive="#eab308" emissiveIntensity={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * Instanced Casuarina / Coastal Palm Treeline
+ * Uses 1 single draw call for 140 trees around SDSC SHAR perimeter
+ */
+function InstancedCoastalTreeline() {
+  const count = 140;
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  const matrices = useMemo(() => {
+    const arr: THREE.Matrix4[] = [];
+    const dummy = new THREE.Object3D();
+
+    for (let i = 0; i < count; i++) {
+      // Distribute trees around perimeter (excluding pad area within 70m)
+      const angle = (i / count) * Math.PI * 2.0;
+      const dist = 85 + (Math.sin(i * 12.3) * 0.5 + 0.5) * 180;
+      const x = Math.cos(angle) * dist - (xDist(angle) > 0 ? 0 : 40);
+      const z = Math.sin(angle) * dist;
+
+      // Keep pad area clear
+      if (Math.abs(x) < 55 && Math.abs(z) < 55) continue;
+
+      const scale = 0.8 + ((i * 17) % 10) * 0.08;
+      dummy.position.set(x, 0, z);
+      dummy.scale.set(scale, scale * (1.0 + ((i * 7) % 5) * 0.1), scale);
+      dummy.rotation.y = (i * 37) % Math.PI;
+      dummy.updateMatrix();
+      arr.push(dummy.matrix.clone());
+    }
+    return arr;
+  }, [count]);
+
+  function xDist(a: number) {
+    return Math.cos(a);
+  }
+
+  useFrame(() => {
+    if (meshRef.current && meshRef.current.count !== matrices.length) {
+      matrices.forEach((mat, idx) => {
+        meshRef.current?.setMatrixAt(idx, mat);
+      });
+      meshRef.current.instanceMatrix.needsUpdate = true;
+    }
+  });
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, matrices.length]}
+      position={[0, 0, 0]}
+    >
+      <coneGeometry args={[2.8, 9, 7]} />
+      <meshStandardMaterial color="#14532d" roughness={0.9} />
+    </instancedMesh>
+  );
+}
+
+/**
+ * Mid-Atmosphere Procedural Cloud Deck (3 km to 8 km)
+ * The vehicle punches cleanly through this multi-layered stratum during ascent!
+ */
+function CloudDeckStratum({ altitude_m }: { altitude_m: number }) {
+  // Only render when rocket is below 16 km
+  if (altitude_m > 16000) return null;
+
+  return (
+    <group position={[0, 4500, 0]}>
+      {/* Lower Stratus Layer (3.5 km) */}
+      <mesh position={[0, -1000, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[18000, 18000, 8, 8]} />
+        <meshStandardMaterial
+          color="#f8fafc"
+          transparent
+          opacity={0.32}
+          roughness={1.0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Mid Cumulus Cloud Tufts */}
+      {[-300, 250, 800, -900].map((cx, idx) => (
+        <mesh key={idx} position={[cx, ((idx % 3) - 1) * 350, ((idx * 400) % 1200) - 600]}>
+          <sphereGeometry args={[950 + idx * 150, 16, 12]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.22}
+            roughness={1.0}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+
+      {/* Upper Altocumulus Deck (7 km) */}
+      <mesh position={[0, 2500, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[22000, 22000, 8, 8]} />
+        <meshStandardMaterial
+          color="#f1f5f9"
+          transparent
+          opacity={0.25}
+          roughness={1.0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
       </mesh>
     </group>
   );
@@ -52,101 +169,235 @@ function LightningTower({ position }: { position: [number, number, number] }) {
 
 export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
   const groundGroupRef = useRef<THREE.Group>(null);
-  const umbilicalArmRef = useRef<THREE.Group>(null);
+  const arm1Ref = useRef<THREE.Group>(null);
+  const arm2Ref = useRef<THREE.Group>(null);
+  const arm3Ref = useRef<THREE.Group>(null);
   const padTexture = useMemo(() => getProceduralPadTexture(), []);
 
   // Update floating origin ground displacement
+  // DOWNRANGE FIX: downrange_m passed in is surface-relative downrange (Earth-rotation drift subtracted)
   useFrame(() => {
     if (groundGroupRef.current) {
-      // Ground plane sinks down as rocket ascends
+      // Ground sinks vertically as rocket ascends
       groundGroupRef.current.position.y = -altitude_m;
-      // Ground moves backwards as downrange distance increases (sub-scaled for floating-origin visuals)
-      groundGroupRef.current.position.x = -Math.min(5000, downrange_m * 0.1);
+      // Ground translates backward only with surface-relative downrange
+      groundGroupRef.current.position.x = -Math.min(5000, downrange_m * 0.08);
     }
 
-    // Umbilical swing arm retraction at T+0s
-    if (umbilicalArmRef.current) {
-      const armRetract = time_s > 0 ? Math.min(Math.PI * 0.45, time_s * 0.8) : 0;
-      umbilicalArmRef.current.rotation.y = armRetract;
+    // Realistic multi-tier Umbilical Swing Arm retractions (T+0 to T+3s)
+    if (arm1Ref.current && arm2Ref.current && arm3Ref.current) {
+      const retract = time_s > 0 ? Math.min(Math.PI * 0.48, time_s * 0.9) : 0;
+      arm1Ref.current.rotation.y = retract;
+      arm2Ref.current.rotation.y = retract * 0.95;
+      arm3Ref.current.rotation.y = retract * 0.9;
     }
   });
 
-  // Only render ground if altitude < 60 km to save draw calls when high in the atmosphere
-  if (altitude_m > 60000) return null;
+  // Only render ground if altitude < 55 km to save GPU resources high in the mesosphere
+  if (altitude_m > 55000) return null;
 
   return (
     <group ref={groundGroupRef}>
+      {/* Mid-atmosphere Cloud Deck (3 km - 8 km) */}
+      <CloudDeckStratum altitude_m={altitude_m} />
+
       {/* ======================================================== */}
-      {/* FIRST LAUNCH PAD (FLP) CONCRETE DECK                      */}
+      {/* 1. ELEVATED CONCRETE LAUNCH PEDESTAL & FLAME TRENCHES     */}
       {/* ======================================================== */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-        <planeGeometry args={[180, 180]} />
-        <meshStandardMaterial map={padTexture} roughness={0.8} metalness={0.2} />
+      {/* Main Elevated Pedestal Structure */}
+      <mesh position={[0, 1.8, 0]} receiveShadow castShadow>
+        <boxGeometry args={[42, 3.6, 42]} />
+        <meshStandardMaterial color="#64748b" roughness={0.8} metalness={0.2} />
       </mesh>
 
-      {/* Flame Deflector Trench Cavity */}
-      <mesh position={[0, -3.0, 0]}>
-        <boxGeometry args={[16, 5.5, 36]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.9} />
+      {/* Concrete Launch Deck Surface with markings */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 3.62, 0]} receiveShadow>
+        <planeGeometry args={[160, 160]} />
+        <meshStandardMaterial map={padTexture} roughness={0.75} metalness={0.2} />
       </mesh>
 
-      {/* 4 Iconic FLP Lightning Protection Lattice Towers (Sriharikota FLP) */}
-      <LightningTower position={[42, 0, 42]} />
-      <LightningTower position={[-42, 0, 42]} />
-      <LightningTower position={[42, 0, -42]} />
-      <LightningTower position={[-42, 0, -42]} />
+      {/* Circular Steel Launch Mount Ring & Hold-down Pedestals */}
+      <mesh position={[0, 3.75, 0]}>
+        <cylinderGeometry args={[4.2, 4.5, 0.4, 32]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {/* 4 Corner Hold-down Clamps */}
+      {[-3.2, 3.2].map((cx) =>
+        [-3.2, 3.2].map((cz) => (
+          <mesh key={`${cx}-${cz}`} position={[cx, 4.1, cz]} castShadow>
+            <boxGeometry args={[1.0, 1.0, 1.0]} />
+            <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
+          </mesh>
+        ))
+      )}
 
-      {/* Launch Pad Perimeter Floodlights */}
-      <pointLight position={[42, 35, 42]} intensity={0.9} color="#fef08a" distance={90} />
-      <pointLight position={[-42, 35, 42]} intensity={0.9} color="#fef08a" distance={90} />
-      <pointLight position={[42, 35, -42]} intensity={0.9} color="#fef08a" distance={90} />
-      <pointLight position={[-42, 35, -42]} intensity={0.9} color="#fef08a" distance={90} />
+      {/* Twin East-West Concrete Flame Deflector Trenches */}
+      <mesh position={[-28, 0.5, 0]} receiveShadow>
+        <boxGeometry args={[22, 4.0, 18]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.95} />
+      </mesh>
+      <mesh position={[28, 0.5, 0]} receiveShadow>
+        <boxGeometry args={[22, 4.0, 18]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.95} />
+      </mesh>
+
+      {/* Scorched Central Flame Deflector Wedge (Inverted V-shape deflector) */}
+      <mesh position={[0, 0.8, 0]} rotation={[0, 0, Math.PI / 4]}>
+        <boxGeometry args={[5.5, 5.5, 14]} />
+        <meshStandardMaterial color="#090d16" roughness={0.9} />
+      </mesh>
 
       {/* ======================================================== */}
-      {/* UMBILICAL LAUNCH TOWER & SWING ARMS                       */}
+      {/* 2. UMBILICAL LAUNCH TOWER & 3-TIER SWING ARMS            */}
       {/* ======================================================== */}
-      <group position={[-6.5, 0, 0]}>
-        {/* Main Umbilical Tower Mast (~48m lattice tower) */}
-        <mesh position={[0, 24, 0]} castShadow>
-          <boxGeometry args={[4.5, 48, 4.5]} />
-          <meshStandardMaterial color="#dc2626" roughness={0.5} wireframe={false} />
+      <group position={[-9.5, 3.6, 0]}>
+        {/* Main 54-meter Red Lattice Tower Mast */}
+        <mesh position={[0, 27, 0]} castShadow>
+          <boxGeometry args={[5.2, 54, 5.2]} />
+          <meshStandardMaterial color="#b91c1c" roughness={0.5} />
         </mesh>
 
-        {/* Retractable Umbilical Swing Arm (retracts at T-0) */}
-        <group ref={umbilicalArmRef} position={[2.2, 38, 0]}>
-          <mesh position={[2.2, 0, 0]}>
-            <boxGeometry args={[4.4, 1.2, 1.0]} />
-            <meshStandardMaterial color="#f1f5f9" metalness={0.7} />
+        {/* Structural Catwalk Platforms at 18m, 32m, 44m */}
+        {[18, 32, 44].map((py) => (
+          <mesh key={py} position={[1.2, py, 0]}>
+            <boxGeometry args={[7.5, 0.6, 6.8]} />
+            <meshStandardMaterial color="#475569" metalness={0.7} />
+          </mesh>
+        ))}
+
+        {/* Retractable Swing Arm 1: S12 / PS1 Umbilicals (y = 20) */}
+        <group ref={arm1Ref} position={[2.6, 20, 0]}>
+          <mesh position={[2.5, 0, 0]}>
+            <boxGeometry args={[5.0, 1.2, 1.1]} />
+            <meshStandardMaterial color="#f8fafc" metalness={0.6} />
           </mesh>
         </group>
 
-        {/* Tower Top Lightning Mast */}
-        <mesh position={[0, 52, 0]}>
-          <cylinderGeometry args={[0.1, 0.4, 8, 8]} />
+        {/* Retractable Swing Arm 2: PS2 Liquid Servicing (y = 33) */}
+        <group ref={arm2Ref} position={[2.6, 33, 0]}>
+          <mesh position={[2.5, 0, 0]}>
+            <boxGeometry args={[5.0, 1.1, 1.0]} />
+            <meshStandardMaterial color="#f8fafc" metalness={0.6} />
+          </mesh>
+        </group>
+
+        {/* Retractable Swing Arm 3: Fairing / Satellite Environmental Duct (y = 45) */}
+        <group ref={arm3Ref} position={[2.6, 45, 0]}>
+          <mesh position={[2.4, 0, 0]}>
+            <boxGeometry args={[4.8, 1.0, 0.9]} />
+            <meshStandardMaterial color="#e2e8f0" metalness={0.7} />
+          </mesh>
+        </group>
+
+        {/* Top Lightning Mast Needle */}
+        <mesh position={[0, 58, 0]}>
+          <cylinderGeometry args={[0.08, 0.4, 8, 8]} />
           <meshStandardMaterial color="#cbd5e1" metalness={0.9} />
         </mesh>
       </group>
 
       {/* ======================================================== */}
-      {/* SRIHARIKOTA ISLAND COASTLINE & BAY OF BENGAL OCEAN        */}
+      {/* 3. MOBILE SERVICE TOWER (MST) RAIL TRACKS                */}
+      {/* ======================================================== */}
+      {/* 2 Sets of Heavy Steel Rails leading 120m West from pad   */}
+      {[-3.5, -2.2, 2.2, 3.5].map((rz) => (
+        <mesh key={rz} position={[-60, 3.7, rz]}>
+          <boxGeometry args={[120, 0.2, 0.25]} />
+          <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.2} />
+        </mesh>
+      ))}
+
+      {/* Concrete MST Rail Bed */}
+      <mesh position={[-60, 3.63, 0]}>
+        <boxGeometry args={[120, 0.1, 12]} />
+        <meshStandardMaterial color="#475569" roughness={0.8} />
+      </mesh>
+
+      {/* ======================================================== */}
+      {/* 4. PROPELLANT & CRYO STORAGE SPHERES (WHITE)             */}
+      {/* ======================================================== */}
+      <group position={[-50, 6.0, 45]}>
+        <mesh castShadow>
+          <sphereGeometry args={[5.5, 24, 20]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.3} roughness={0.25} />
+        </mesh>
+        {/* Support cradle legs */}
+        <mesh position={[0, -4.0, 0]}>
+          <cylinderGeometry args={[4.0, 4.5, 3.5, 8, 1, true]} />
+          <meshStandardMaterial color="#334155" metalness={0.7} />
+        </mesh>
+      </group>
+      <group position={[-38, 5.0, 50]}>
+        <mesh castShadow>
+          <sphereGeometry args={[4.2, 24, 20]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.3} roughness={0.25} />
+        </mesh>
+      </group>
+
+      {/* ======================================================== */}
+      {/* 5. PERIMETER CONCRETE BLAST DEFENSE WALLS                */}
+      {/* ======================================================== */}
+      <mesh position={[0, 4.8, 65]}>
+        <boxGeometry args={[130, 2.5, 1.2]} />
+        <meshStandardMaterial color="#475569" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 4.8, -65]}>
+        <boxGeometry args={[130, 2.5, 1.2]} />
+        <meshStandardMaterial color="#475569" roughness={0.85} />
+      </mesh>
+
+      {/* ======================================================== */}
+      {/* 6. 4 TALL LIGHTNING PROTECTION LATTICE TOWERS            */}
+      {/* ======================================================== */}
+      <LightningTower position={[46, 0, 46]} />
+      <LightningTower position={[-46, 0, 46]} />
+      <LightningTower position={[46, 0, -46]} />
+      <LightningTower position={[-46, 0, -46]} />
+
+      {/* Floodlights illuminating the launch pad */}
+      <pointLight position={[46, 38, 46]} intensity={1.2} color="#fef08a" distance={110} />
+      <pointLight position={[-46, 38, 46]} intensity={1.2} color="#fef08a" distance={110} />
+      <pointLight position={[46, 38, -46]} intensity={1.2} color="#fef08a" distance={110} />
+      <pointLight position={[-46, 38, -46]} intensity={1.2} color="#fef08a" distance={110} />
+
+      {/* ======================================================== */}
+      {/* 7. INSTANCED COASTAL CASUARINA / PALM TREELINE           */}
+      {/* ======================================================== */}
+      <InstancedCoastalTreeline />
+
+      {/* ======================================================== */}
+      {/* 8. SRIHARIKOTA ISLAND COASTLINE & BAY OF BENGAL OCEAN    */}
       {/* ======================================================== */}
       {/* Sandy Beach / Coastal Terrain */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]} receiveShadow>
-        <planeGeometry args={[2200, 2200]} />
-        <meshStandardMaterial color="#365314" roughness={0.9} metalness={0.1} />
+        <planeGeometry args={[3200, 3200]} />
+        <meshStandardMaterial color="#2d401e" roughness={0.9} metalness={0.05} />
       </mesh>
 
-      {/* Bay of Bengal Ocean Surface (East of launch pad) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[600, -0.2, 0]} receiveShadow>
-        <planeGeometry args={[1800, 2200]} />
+      {/* Bay of Bengal Ocean Surface (East of launch pad) with polygonOffset */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[800, -0.15, 0]} receiveShadow>
+        <planeGeometry args={[2200, 3200]} />
         <meshStandardMaterial
-          color="#0369a1"
-          roughness={0.2}
-          metalness={0.4}
+          color="#0284c7"
+          roughness={0.15}
+          metalness={0.5}
           transparent
           opacity={0.88}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
         />
       </mesh>
+
+      {/* Rich PBR Lighting: warm golden morning sun + sky/ground bounce */}
+      <hemisphereLight args={['#38bdf8', '#1e293b', 0.65]} />
+      <directionalLight
+        position={[90, 140, 70]}
+        intensity={2.2}
+        color="#fef3c7"
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+      />
     </group>
   );
 }

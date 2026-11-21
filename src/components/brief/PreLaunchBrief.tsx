@@ -1,4 +1,4 @@
-import { Award, Sliders, Wind, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Award, Sliders, Wind, CheckCircle2, ChevronRight, ExternalLink } from 'lucide-react';
 import { ChallengeModeModifiers, TrajectoryResult, PRESET_MISSIONS, MissionConfig } from '../../sim';
 import { DownrangeMap } from './DownrangeMap';
 
@@ -330,9 +330,20 @@ export function PreLaunchBrief({
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] font-mono text-slate-400 italic">
-                    * Synthetic scenario presets, not live MOSDAC data.
-                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] font-mono text-slate-400 gap-1 pt-1">
+                    <span className="italic">
+                      * Synthetic upper-air wind scenarios inspired by SAC MOSDAC cyclone/wind profiles.
+                    </span>
+                    <a
+                      href="https://mosdac.gov.in/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1 font-semibold flex-none"
+                    >
+                      <span>SAC MOSDAC Portal</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
                 </div>
 
                 {/* 4. Live Student Engineering Readout Card */}

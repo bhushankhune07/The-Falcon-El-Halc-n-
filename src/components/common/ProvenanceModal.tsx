@@ -116,6 +116,8 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                   <li>Published sequence-of-events milestones (T+70s, T+92s, T+110s, T+177s, T+263s, T+478s, T+1030s)</li>
                   <li>Target Orbit: 529 km, 97.6° SSO</li>
                   <li>Bhoonidhi C-band SAR MRS Level-2 GeoTIFF schema</li>
+                  <li>ISRO Deep-Space Payload Specs: MOM (MCC, TIS, MSM, LAP, MENCA) &amp; Aditya-L1 (VELC, SUIT, SoLEXS, HEL1OS, ASPEX, PAPA, MAG)</li>
+                  <li>4 Official ISRO Portals: Bhoonidhi, Bhuvan, MOSDAC, and VEDAS</li>
                 </ul>
               </div>
 
@@ -154,7 +156,8 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
                   <li>Challenge Mode wind profiles (NOT live MOSDAC data)</li>
                   <li>Downrange booster splashdown corridor polygons</li>
                   <li>Continuous Max-Q &amp; Sensed G-force curves</li>
-                  <li>Procedural 3D PSLV mesh, plumes &amp; SAR backscatter</li>
+                  <li>Procedural 3D FLP launchpad, umbilical tower, Earth night-lights &amp; SAR backscatter</li>
+                  <li>Schematic Deep-Space Transfer Phase (MOM Mars transfer arc &amp; Aditya-L1 Sun-L1 halo orbit; ascent physics = RK4)</li>
                 </ul>
               </div>
             </div>

@@ -1,7 +1,10 @@
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
-import { getProceduralEarthTexture } from './textures/proceduralTextures';
+import {
+  getProceduralEarthTexture,
+  getProceduralCloudsTexture,
+} from './textures/proceduralTextures';
 
 interface Props {
   radius?: number;
@@ -11,45 +14,55 @@ export function ScaledEarth({ radius = 60 }: Props) {
   const earthMeshRef = useRef<THREE.Mesh>(null);
   const cloudsMeshRef = useRef<THREE.Mesh>(null);
   const earthTexture = useMemo(() => getProceduralEarthTexture(), []);
+  const cloudsTexture = useMemo(() => getProceduralCloudsTexture(), []);
 
   // Subtle rotation of Earth & Cloud layer
   useFrame((_, delta) => {
+    if (earthMeshRef.current) {
+      earthMeshRef.current.rotation.y += delta * 0.002;
+    }
     if (cloudsMeshRef.current) {
-      cloudsMeshRef.current.rotation.y += delta * 0.008;
+      cloudsMeshRef.current.rotation.y += delta * 0.005;
     }
   });
 
   return (
     <group position={[0, 0, 0]}>
-      {/* 3D Earth Globe with Detailed Indian Subcontinent Texture */}
+      {/* ======================================================== */}
+      {/* 1. HIGH-FIDELITY EARTH GLOBE (Continent Bathymetry & Cities) */}
+      {/* ======================================================== */}
       <mesh ref={earthMeshRef} receiveShadow>
         <sphereGeometry args={[radius, 64, 48]} />
         <meshStandardMaterial
           map={earthTexture}
-          roughness={0.65}
-          metalness={0.1}
+          roughness={0.55}
+          metalness={0.15}
         />
       </mesh>
 
-      {/* Atmospheric Thin Cloud Shell */}
+      {/* ======================================================== */}
+      {/* 2. ROTATING PROCEDURAL CLOUD DECK (Radius * 1.012)        */}
+      {/* ======================================================== */}
       <mesh ref={cloudsMeshRef}>
-        <sphereGeometry args={[radius * 1.008, 48, 36]} />
+        <sphereGeometry args={[radius * 1.012, 48, 36]} />
         <meshStandardMaterial
-          color="#ffffff"
+          map={cloudsTexture}
           transparent
-          opacity={0.16}
+          opacity={0.35}
           roughness={1.0}
           depthWrite={false}
         />
       </mesh>
 
-      {/* Atmospheric Rim Glow (Fresnel Halo) */}
+      {/* ======================================================== */}
+      {/* 3. RAYLEIGH-SCATTERING CYAN-BLUE ATMOSPHERIC LIMB GLOW    */}
+      {/* ======================================================== */}
       <mesh>
-        <sphereGeometry args={[radius * 1.035, 48, 36]} />
+        <sphereGeometry args={[radius * 1.038, 48, 36]} />
         <meshBasicMaterial
           color="#38bdf8"
           transparent
-          opacity={0.22}
+          opacity={0.32}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
           depthWrite={false}

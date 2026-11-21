@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
 import { MissionConfig, TrajectoryResult } from '../../sim';
@@ -18,6 +18,7 @@ interface Props {
 }
 
 export function DownrangeMap({ mission, trajectory }: Props) {
+  const [bhuvanOverlayActive, setBhuvanOverlayActive] = useState(false);
   const padLat = mission.launchSite.latitude_deg; // 13.7199
   const padLon = mission.launchSite.longitude_deg; // 80.2304
   const azimuthRad = (mission.launchSite.azimuth_deg * Math.PI) / 180.0;
@@ -75,19 +76,51 @@ export function DownrangeMap({ mission, trajectory }: Props) {
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-900/60 rounded-xl border border-slate-800 overflow-hidden shadow-xl">
-      <div className="flex-none px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+      <div className="flex-none px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
           <h3 className="text-xs font-mono font-semibold tracking-wider text-slate-200">
             SRIHARIKOTA DOWNRANGE FLIGHT CORRIDOR
           </h3>
         </div>
-        <span className="text-[11px] font-mono text-slate-400">
-          Azimuth: {mission.launchSite.azimuth_deg.toFixed(1)}° (SE over Bay of Bengal)
-        </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setBhuvanOverlayActive(!bhuvanOverlayActive)}
+            className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-all ${
+              bhuvanOverlayActive
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/60'
+                : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+            }`}
+          >
+            🛰️ {bhuvanOverlayActive ? 'Bhuvan Overlay: ON' : 'Bhuvan Overlay: OFF'}
+          </button>
+          <span className="text-[11px] font-mono text-slate-400">
+            Azimuth: {mission.launchSite.azimuth_deg.toFixed(1)}° (SE)
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 w-full relative min-h-[320px]">
+        {bhuvanOverlayActive && (
+          <div className="absolute top-3 right-3 z-[1000] bg-slate-950/90 border border-amber-500/50 rounded-lg p-2.5 max-w-xs shadow-2xl backdrop-blur font-mono text-[11px]">
+            <div className="flex items-center justify-between text-amber-300 font-semibold mb-1">
+              <span>🇮🇳 NRSC Bhuvan Geoportal</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40">Reference</span>
+            </div>
+            <p className="text-slate-300 text-[10px] leading-tight mb-2">
+              Downrange hazard zones align with ISRO Sriharikota FLP coastal safety corridors over the Bay of Bengal.
+            </p>
+            <a
+              href="https://bhuvan.nrsc.gov.in/"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 underline font-mono"
+            >
+              Open NRSC Bhuvan Geoportal ↗
+            </a>
+          </div>
+        )}
         <MapContainer
           center={[11.5, 83.5]}
           zoom={5}

@@ -1,0 +1,372 @@
+export interface InspectableComponent {
+  id: string;
+  name: string;
+  mission: string;
+  category: 'stage' | 'payload' | 'instrument' | 'structure';
+  propellantOrSensor: string;
+  thrustOrResolution?: string;
+  dimensionsOrMass: string;
+  isroRole: string;
+  technicalSpecs: Record<string, string>;
+}
+
+export const INSPECTABLE_COMPONENTS: Record<string, InspectableComponent> = {
+  // ==========================================
+  // PSLV-XL LAUNCH VEHICLE STAGES
+  // ==========================================
+  strap_ons: {
+    id: 'strap_ons',
+    name: '6x S12 Solid Strap-on Boosters (PSOM-XL)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'stage',
+    propellantOrSensor: 'HTPB Solid Propellant (Hydroxyl-terminated polybutadiene)',
+    thrustOrResolution: '719 kN peak thrust each (4,314 kN combined)',
+    dimensionsOrMass: '12.0 m length × 1.0 m diameter | 12.2 t mass each',
+    isroRole: 'Augments PS1 liftoff thrust. 4 ground-lit motors ignite at T-0; 2 air-lit motors ignite at T+25s to boost vehicle through high-dynamic-pressure transonic climb.',
+    technicalSpecs: {
+      'Propellant Mass': '12.2 tonnes each',
+      'Action Time': '49.5 s burn duration',
+      'Casing Material': 'Maraging steel (18% Ni high-strength alloy)',
+      'Nozzle Flex Angle': 'Fixed canted nozzles (9.5° outward angle)',
+      'Staging Milestone': 'Ground strap-ons jettison @ T+70s; Air-lit @ T+92s',
+    },
+  },
+  ps1_core: {
+    id: 'ps1_core',
+    name: 'PS1 Core Stage (S139 Solid Motor)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'stage',
+    propellantOrSensor: 'HTPB Solid Composite Propellant',
+    thrustOrResolution: '4,800 kN peak thrust (liftoff)',
+    dimensionsOrMass: '20.0 m length × 2.8 m diameter | 138 t propellant',
+    isroRole: "World's third-largest operational solid rocket booster. Delivers immense liftoff impulse to propel the 44-meter PSLV-XL stack through the dense lower atmosphere.",
+    technicalSpecs: {
+      'Propellant Load': '138.2 tonnes HTPB',
+      'Specific Impulse (Isp)': '269 s (sea level) / 295 s (vacuum)',
+      'Burn Duration': '108 seconds',
+      'Control System': 'Secondary Injection Thrust Vector Control (SITVC)',
+      'Separation Velocity': '≈ 2,320 m/s @ 55 km altitude',
+    },
+  },
+  ps2_vikas: {
+    id: 'ps2_vikas',
+    name: 'PS2 Liquid Stage (Vikas Hypergolic Engine)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'stage',
+    propellantOrSensor: 'UH25 Fuel (75% UDMH + 25% Hydrazine) + N2O4 Oxidizer',
+    thrustOrResolution: '803 kN thrust (vacuum)',
+    dimensionsOrMass: '12.8 m length × 2.8 m diameter | 41 t propellant',
+    isroRole: 'Heritage liquid propulsion workhorse designed by LPSC. Provides closed-loop pitch and yaw steering to guide vehicle out of the atmosphere toward orbital velocity.',
+    technicalSpecs: {
+      'Combustion Pressure': '58.5 bar',
+      'Specific Impulse (Isp)': '293 s (vacuum)',
+      'Burn Duration': '152 seconds',
+      'Gimbal System': 'Two-axis hydraulic engine gimbaling (±4°)',
+      'Regenerative Cooling': 'Regeneratively cooled engine jacket',
+    },
+  },
+  ps3_hps3: {
+    id: 'ps3_hps3',
+    name: 'PS3 Solid Motor (HPS3 Composite Case)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'stage',
+    propellantOrSensor: 'HTPB-based High-Energy Solid Propellant',
+    thrustOrResolution: '240 kN peak thrust (vacuum)',
+    dimensionsOrMass: '3.6 m length × 2.0 m diameter | 7.6 t propellant',
+    isroRole: 'Lightweight Kevlar-filament-wound solid stage designed for vacuum velocity acceleration before the extended exo-atmospheric coast phase.',
+    technicalSpecs: {
+      'Casing Material': 'Kevlar / Carbon epoxy filament wound',
+      'Specific Impulse (Isp)': '295 s (vacuum)',
+      'Burn Duration': '112.5 seconds',
+      'Thrust Vector Control': 'Flex nozzle control system (±2° pitch/yaw)',
+      'Coast Phase': 'Followed by ~100s exo-atmospheric coast to apogee',
+    },
+  },
+  ps4_twin: {
+    id: 'ps4_twin',
+    name: 'PS4 Upper Stage (Twin Liquid Engines)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'stage',
+    propellantOrSensor: 'MMH (Monomethylhydrazine) + MON3 (Mixed Oxides of Nitrogen)',
+    thrustOrResolution: '2 × 7.3 kN (14.6 kN total vacuum thrust)',
+    dimensionsOrMass: '2.6 m length × 1.3 m diameter | 1.6 t propellant',
+    isroRole: 'Precision orbital circularization upper stage. Features multiple restart capability and differential gimballing for final inclination and perigee insertion.',
+    technicalSpecs: {
+      'Tanks': 'Titanium alloy spherical pressure-fed tanks',
+      'Specific Impulse (Isp)': '308 s (vacuum)',
+      'Burn Duration': '450–520 seconds depending on payload orbit',
+      'Steering': 'Engine gimbal (±3°) + Reaction Control System (RCS)',
+      'Cutoff Accuracy': 'Velocity trimmed to ±1 m/s of target SSO vector',
+    },
+  },
+  payload_fairing: {
+    id: 'payload_fairing',
+    name: 'Payload Fairing (3.2m Isogrid Heat Shield)',
+    mission: 'PSLV-XL Launch Vehicle',
+    category: 'structure',
+    propellantOrSensor: 'Aluminium-alloy isogrid shell + Cork thermal ablative layer',
+    thrustOrResolution: 'Passive aerodynamic protection',
+    dimensionsOrMass: '8.3 m length × 3.2 m diameter | ~1,150 kg mass',
+    isroRole: 'Protects fragile satellites and SAR antennas against aerodynamic buffeting, acoustic noise, and frictional heating during atmospheric ascent.',
+    technicalSpecs: {
+      'Separation Mechanism': 'Linear pyrotechnic Zip-cord severance system',
+      'Separation Condition': 'Jettisons above ~105–115 km when free-molecular heating drops below 1135 W/m²',
+      'Interior Lining': 'Acoustic soundproofing foam tiles & contamination seal',
+      'Jettison Clearance': 'Lateral springs push two halves cleanly away from stack',
+    },
+  },
+
+  // ==========================================
+  // EOS-04 SPACECRAFT & INSTRUMENTS
+  // ==========================================
+  eos04_sar: {
+    id: 'eos04_sar',
+    name: 'C-band Synthetic Aperture Radar (C-SAR)',
+    mission: 'EOS-04 (RISAT-1A)',
+    category: 'instrument',
+    propellantOrSensor: '5.4 GHz Active Phased Array Antenna (C-band)',
+    thrustOrResolution: '3 to 50 meters spatial resolution (Mode dependent)',
+    dimensionsOrMass: '6.0 m × 1.4 m deployed planar array | 1,710 kg payload',
+    isroRole: 'Primary radar imaging instrument. Transmits microwave pulses that penetrate dense cloud cover, haze, and rain to provide all-weather day/night radar backscatter imagery.',
+    technicalSpecs: {
+      'Operating Frequency': '5.35 GHz (C-band, ~5.6 cm wavelength)',
+      'Polarisation Modes': 'HH, HV, VV, VH, and Hybrid/Circular Dual-Pol',
+      'Swath Width': '10 km (Spotlight) to 223 km (Scansar)',
+      'Data Quantization': '8-bit / 10-bit Raw I/Q samples',
+      'Key Applications': 'Kharif rice mapping, flood inundation, soil moisture, coastal erosion',
+    },
+  },
+  eos04_solar: {
+    id: 'eos04_solar',
+    name: 'Dual Deployable Solar Arrays & Power Bus',
+    mission: 'EOS-04 (RISAT-1A)',
+    category: 'payload',
+    propellantOrSensor: 'Multi-junction GaAs Solar Cells + Li-ion Battery Bank',
+    thrustOrResolution: '3.0 kW peak electrical power generation',
+    dimensionsOrMass: '2 wings × 3 panels each | ~9.6 m total deployed wingspan',
+    isroRole: 'Generates power for high-draw SAR transmitter traveling-wave tube amplifiers (TWTAs) and charges flight batteries for night-side imaging passes.',
+    technicalSpecs: {
+      'Bus Voltage': '70 V regulated bus',
+      'Battery Capacity': '80 Ah Lithium-Ion battery pack',
+      'Deployment': 'Spring-driven mechanism with thermal knife release',
+      'Sun-Tracking': 'Solar Array Drive Mechanism (SADM) 1-axis continuous tracking',
+    },
+  },
+  eos04_bus: {
+    id: 'eos04_bus',
+    name: 'EOS-04 Spacecraft Bus & Avionics',
+    mission: 'EOS-04 (RISAT-1A)',
+    category: 'structure',
+    propellantOrSensor: 'Hydrazine (N2H4) Monopropellant Reaction Wheels & Thrusters',
+    thrustOrResolution: '3-axis stabilized zero-momentum attitude control',
+    dimensionsOrMass: 'Cubical bus 1.8m × 1.8m × 2.4m | 1,710 kg total spacecraft mass',
+    isroRole: 'Provides 3-axis pointing, orbit maintenance, high-rate X-band telemetry downlinks (to Shadnagar ground station), and autonomous health monitoring.',
+    technicalSpecs: {
+      'Attitude Accuracy': '±0.05° roll/pitch/yaw pointing stability',
+      'Telemetry Downlink': 'X-band dual-carrier @ 320 Mbps',
+      'Orbit Altitude': '529 km Sun-Synchronous Polar Orbit',
+      'Orbit Inclination': '97.5° inclination, 95.0 minute orbital period',
+      'Mission Life': '10 years operational design life',
+    },
+  },
+
+  // ==========================================
+  // MANGALYAAN (MOM / PSLV-C25) PAYLOADS
+  // ==========================================
+  mom_mcc: {
+    id: 'mom_mcc',
+    name: 'Mars Colour Camera (MCC)',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'instrument',
+    propellantOrSensor: 'Tricolor Bayer-pattern CMOS area sensor (visible light)',
+    thrustOrResolution: '19.5 m to 4 km spatial resolution (orbit-dependent)',
+    dimensionsOrMass: '3.3 kg mass | 2048 × 2048 pixels sensor',
+    isroRole: 'Captured iconic full-disk global views of Mars, dynamic dust storms, Valles Marineris canyon systems, and Martian moons Phobos and Deimos.',
+    technicalSpecs: {
+      'Spectral Bands': 'Red (620–680 nm), Green (520–580 nm), Blue (440–480 nm)',
+      'Field of View': '7.4° × 7.4°',
+      'Focal Length': '100 mm f/2.8 lens',
+      'Famous Image': 'First Asian spacecraft to image the whole illuminated disc of Mars in one frame',
+    },
+  },
+  mom_tis: {
+    id: 'mom_tis',
+    name: 'Thermal Infrared Imaging Spectrometer (TIS)',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'instrument',
+    propellantOrSensor: 'Uncooled microbolometer detector array (7–13 μm)',
+    thrustOrResolution: 'Thermal resolution < 1K @ 300K target',
+    dimensionsOrMass: '3.2 kg mass | 6.5 W power consumption',
+    isroRole: 'Maps surface composition and mineralogy of Mars by measuring thermal emission spectra and calculating thermal inertia of surface regolith.',
+    technicalSpecs: {
+      'Spectral Range': '7 to 13 micrometers (thermal infrared)',
+      'Detector': '120 × 160 element uncooled microbolometer',
+      'Applications': 'Regolith particle size estimation, silicate/carbonate mapping',
+    },
+  },
+  mom_msm: {
+    id: 'mom_msm',
+    name: 'Methane Sensor for Mars (MSM)',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'instrument',
+    propellantOrSensor: 'Differential Fabry-Perot Etalon Radiometer (1.65 μm)',
+    thrustOrResolution: 'Parts-per-billion (ppb) atmospheric sensitivity',
+    dimensionsOrMass: '2.94 kg mass | 6.7 W power',
+    isroRole: 'Designed to detect and map spatial distribution of atmospheric methane (CH4) on Mars to trace potential biogenic or geological origin.',
+    technicalSpecs: {
+      'Absorption Band': '1.645–1.655 μm methane absorption line',
+      'Reference Channel': '1.625–1.635 μm background continuum',
+      'Method': 'Differential solar reflectance ratio radiometry',
+    },
+  },
+  mom_lap: {
+    id: 'mom_lap',
+    name: 'Lyman Alpha Photometer (LAP)',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'instrument',
+    propellantOrSensor: 'UV absorption cell with microchannel plate detector',
+    thrustOrResolution: 'Hydrogen / Deuterium ratio sensor',
+    dimensionsOrMass: '1.97 kg mass | 2.5 W power',
+    isroRole: 'Measures relative abundance of Deuterium and Hydrogen in the upper Martian exosphere to deduce the historical water-loss rate of Mars.',
+    technicalSpecs: {
+      'Wavelength': '121.6 nm (Lyman-alpha line)',
+      'Key Discovery': 'Helped quantify how ancient Mars lost its primeval oceans to interplanetary space',
+    },
+  },
+  mom_menca: {
+    id: 'mom_menca',
+    name: 'Mars Exospheric Neutral Composition Analyser (MENCA)',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'instrument',
+    propellantOrSensor: 'Quadrupole Mass Spectrometer (1–300 amu range)',
+    thrustOrResolution: '1 amu mass resolution',
+    dimensionsOrMass: '3.56 kg mass | 15 W power',
+    isroRole: 'Analyzes the neutral in-situ composition and altitude profile of the upper atmosphere and exosphere during periapsis passes.',
+    technicalSpecs: {
+      'Detects': 'CO2, N2, CO, Ar, O, H2O vapor species in Martian exosphere',
+      'Heritage': 'Evolved from CHACE instrument flown on Chandrayaan-1',
+    },
+  },
+  mom_bus: {
+    id: 'mom_bus',
+    name: 'MOM Golden Bus & 1.4m High-Gain Dish',
+    mission: 'Mars Orbiter Mission (Mangalyaan)',
+    category: 'structure',
+    propellantOrSensor: 'Liquid Apogee Motor (LAM 440N) + Hydrazine RCS Thrusters',
+    thrustOrResolution: '440 N LAM vacuum thrust for Trans-Mars & MOI burns',
+    dimensionsOrMass: '1.5m cubical bus | 1,337 kg liftoff mass (852 kg propellant)',
+    isroRole: 'Historic interplanetary spacecraft that made India the 1st nation to reach Mars on its maiden attempt at a budget of only ₹450 crore ($74M).',
+    technicalSpecs: {
+      'Main Engine': '440 N Liquid Apogee Motor (LAM) restarted after 300 days of interplanetary slumber',
+      'Communication': '1.4 m High-Gain parabolic dish antenna (S-band & X-band)',
+      'Ground Station': 'ISRO Deep Space Network (IDSN 32m antenna at Byalalu, Bengaluru)',
+      'Orbit Insertion': 'Mars Orbit Insertion (MOI) executed flawlessly on 24 Sept 2014',
+    },
+  },
+
+  // ==========================================
+  // ADITYA-L1 (PSLV-C57) PAYLOADS
+  // ==========================================
+  aditya_velc: {
+    id: 'aditya_velc',
+    name: 'Visible Emission Line Coronagraph (VELC)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'Internally occulted reflecting coronagraph with spectropolarimeter',
+    thrustOrResolution: 'High-speed imaging down to 1.05 solar radii (R☉)',
+    dimensionsOrMass: '170 kg mass | 20 cm off-axis parabolic primary mirror',
+    isroRole: "Aditya-L1's primary payload developed by IIA Bengaluru. Creates an artificial solar eclipse inside the telescope to study the ultra-hot solar corona and coronal mass ejections (CMEs).",
+    technicalSpecs: {
+      'Spectral Lines': 'Fe XIV (530.3 nm green line), Fe XI (789.2 nm), Fe XIII (1074.7 nm)',
+      'Field of View': '1.05 to 3.0 solar radii (R☉)',
+      'Science Goal': 'Solve the 80-year coronal heating paradox (why corona is millions of degrees hotter than surface)',
+    },
+  },
+  aditya_suit: {
+    id: 'aditya_suit',
+    name: 'Solar Ultraviolet Imaging Telescope (SUIT)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'Full-disk UV telescope (200–400 nm) with 11 narrow-band filters',
+    thrustOrResolution: '1.4 arcsec spatial resolution (full disk 4k × 4k)',
+    dimensionsOrMass: '35 kg mass | Developed by IUCAA Pune',
+    isroRole: 'Images the solar photosphere and chromosphere simultaneously in near-UV wavelengths to trace dynamic energy flow across solar atmospheric layers.',
+    technicalSpecs: {
+      'Spectral Range': '200 nm to 400 nm (11 photometric filter bands)',
+      'Detector': '4096 × 4096 back-illuminated UV CCD array',
+      'Science Focus': 'Solar flares, faculae, magnetic network dynamics, UV radiation impact on Earth climate',
+    },
+  },
+  aditya_solexs: {
+    id: 'aditya_solexs',
+    name: 'Solar Low Energy X-ray Spectrometer (SoLEXS)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'Silicon Drift Detector (SDD) X-ray spectrometer',
+    thrustOrResolution: '1 keV to 22 keV spectral energy coverage',
+    dimensionsOrMass: 'Developed by URSC Bengaluru',
+    isroRole: 'Monitors solar flare soft X-rays to measure plasma temperature and emission measure during flare impulsive phases.',
+    technicalSpecs: {
+      'Energy Range': '1 keV to 22 keV',
+      'Spectral Resolution': '< 250 eV @ 5.9 keV',
+      'Target': 'Coronal flare plasma heating physics',
+    },
+  },
+  aditya_hel1os: {
+    id: 'aditya_hel1os',
+    name: 'High Energy L1 Orbiting X-ray Spectrometer (HEL1OS)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'Cadmium-Telluride (CdTe) & CZT semiconductor detectors',
+    thrustOrResolution: '10 keV to 150 keV hard X-ray spectroscopy',
+    dimensionsOrMass: 'Developed by URSC Bengaluru',
+    isroRole: 'Studies non-thermal hard X-ray emissions produced by relativistic electrons accelerated during solar flare explosions.',
+    technicalSpecs: {
+      'Energy Range': '10 keV to 150 keV',
+      'Function': 'Electron acceleration and magnetic reconnection diagnostics',
+    },
+  },
+  aditya_aspex: {
+    id: 'aditya_aspex',
+    name: 'Aditya Solar Wind Particle Experiment (ASPEX)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'SWIS (ion spectrometer) + STEPS (suprathermal particle sensor)',
+    thrustOrResolution: '100 eV to 5 MeV proton & alpha particle distributions',
+    dimensionsOrMass: 'Developed by Physical Research Laboratory (PRL) Ahmedabad',
+    isroRole: 'Directly samples solar wind ions in-situ at Lagrange Point 1 to study solar wind acceleration and alpha-to-proton ratio variations.',
+    technicalSpecs: {
+      'Subsystems': 'SWIS (Solar Wind Ion Spectrometer) & STEPS (Suprathermal & Energetic Particle Spectrometer)',
+      'Measurement': 'Proton and alpha particle energy spectra and directional anisotropy',
+    },
+  },
+  aditya_papa: {
+    id: 'aditya_papa',
+    name: 'Plasma Analyser Package for Aditya (PAPA)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: 'SWEEP (electron energy) + SWICAR (ion composition sensor)',
+    thrustOrResolution: 'Thermal & suprathermal solar wind plasma electrons',
+    dimensionsOrMass: 'Developed by Space Physics Laboratory (SPL) VSSC',
+    isroRole: 'Measures electron and ion composition in solar wind to analyze Coronal Mass Ejections passing over the L1 halo orbit.',
+    technicalSpecs: {
+      'Electron Energy': '10 eV to 3 keV',
+      'Ion Mass Analysis': '1 to 30 amu mass identification',
+    },
+  },
+  aditya_mag: {
+    id: 'aditya_mag',
+    name: 'Dual Tri-Axial Magnetometer (MAG)',
+    mission: 'Aditya-L1 Solar Observatory',
+    category: 'instrument',
+    propellantOrSensor: '2 high-precision tri-axial fluxgate magnetic sensors',
+    thrustOrResolution: '0.02 nT magnetic field resolution (±65,000 nT range)',
+    dimensionsOrMass: 'Mounted on a 6-meter deployable boom to isolate from spacecraft bus',
+    isroRole: 'Continuously measures the micro-Tesla interplanetary magnetic field (IMF) at L1 to detect geomagnetic storm fronts before they strike Earth.',
+    technicalSpecs: {
+      'Sensor Placement': 'Outboard sensor at 6m tip; Inboard sensor at 3m',
+      'Sampling Rate': '8 vectors/sec (normal) to 128 vectors/sec (event mode)',
+      'Crucial Alert': 'Provides Earth with 30–60 minute advance warning of solar storm impacts',
+    },
+  },
+};

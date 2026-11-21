@@ -9,12 +9,15 @@ import {
   Download,
   Volume2,
   VolumeX,
+  Sparkles,
 } from 'lucide-react';
 import { MissionConfig, TrajectoryResult, SimulationState } from '../../sim';
 import { MissionCanvas, SimFrameState, CameraMode } from '../scene';
 import { TelemetrySidebar } from './TelemetrySidebar';
 import { exportTelemetryCsv } from '../../utils/csvExport';
 import { createRocketAudio, RocketAudioManager } from '../../utils/rocketAudio';
+import { ComponentInspector } from '../scene/ComponentInspector';
+import { InspectableComponent } from '../scene/inspectData';
 
 interface Props {
   mission: MissionConfig;
@@ -30,6 +33,8 @@ interface Props {
   cameraMode: CameraMode;
   onSetCameraMode: (mode: CameraMode) => void;
   onSkipToOrbit: () => void;
+  deepSpaceActive?: boolean;
+  onToggleDeepSpace?: (active: boolean) => void;
 }
 
 function getFlightDirectorCallout(t: number, maxTime: number): { phase: string; details: string } {
@@ -119,10 +124,21 @@ export function LaunchView({
   cameraMode,
   onSetCameraMode,
   onSkipToOrbit,
+  deepSpaceActive: controlledDeepSpaceActive,
+  onToggleDeepSpace,
 }: Props) {
   const maxTime_s = trajectory.summary.cutoffTime_s;
   const altKm = currentState.altitude_m / 1000.0;
   const callout = getFlightDirectorCallout(currentTime_s, maxTime_s);
+
+  // Inspector & Deep Space states
+  const [selectedComponent, setSelectedComponent] = useState<InspectableComponent | null>(null);
+  const [internalDeepSpaceActive, setInternalDeepSpaceActive] = useState(false);
+  const deepSpaceActive = controlledDeepSpaceActive !== undefined ? controlledDeepSpaceActive : internalDeepSpaceActive;
+  const setDeepSpaceActive = onToggleDeepSpace ?? setInternalDeepSpaceActive;
+  const [deepSpacePhase, setDeepSpacePhase] = useState(0.35);
+
+  const isDeepSpaceMission = mission.id === 'pslv-c25-mom' || mission.id === 'pslv-c57-aditya-l1';
 
   // Web Audio procedural rocket sound manager
   const rocketAudio = useRef<RocketAudioManager | null>(null);
@@ -184,23 +200,46 @@ export function LaunchView({
             mission={mission}
             cameraMode={cameraMode}
             onCameraModeChange={onSetCameraMode}
+            deepSpaceActive={deepSpaceActive}
+            deepSpacePhase={deepSpacePhase}
+            onSelectComponent={setSelectedComponent}
+          />
+
+          {/* Interactive Component & Payload Inspector Drawer */}
+          <ComponentInspector
+            component={selectedComponent}
+            onClose={() => setSelectedComponent(null)}
           />
 
           {/* Top-Center Flight Director Live Mission Callout Ticker */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 max-w-[90%] sm:max-w-md pointer-events-none">
-            <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 shadow-xl shadow-cyan-950/40 text-xs font-mono">
-              <span className="relative flex h-2 w-2 flex-none">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
-              </span>
-              <div className="flex flex-col truncate">
-                <span className="font-bold text-cyan-300 tracking-wider text-[11px] leading-tight">
-                  {callout.phase}
-                </span>
-                <span className="text-[10px] text-slate-400 truncate leading-tight">
-                  {callout.details}
-                </span>
+            {deepSpaceActive ? (
+              <div className="px-3.5 py-1.5 rounded-full bg-purple-950/90 backdrop-blur-md border border-purple-500/60 shadow-xl shadow-purple-950/50 text-xs font-mono font-bold text-purple-200 text-center">
+                SCHEMATIC INTERPLANETARY TRANSFER PHASE (Post-EPO Keplerian Visualization — Ascent Phase = RK4)
               </div>
+            ) : (
+              <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 shadow-xl shadow-cyan-950/40 text-xs font-mono">
+                <span className="relative flex h-2 w-2 flex-none">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
+                </span>
+                <div className="flex flex-col truncate">
+                  <span className="font-bold text-cyan-300 tracking-wider text-[11px] leading-tight">
+                    {callout.phase}
+                  </span>
+                  <span className="text-[10px] text-slate-400 truncate leading-tight">
+                    {callout.details}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Discovery Tip Pill for Payload Inspector */}
+          <div className="absolute top-16 right-4 z-10 pointer-events-none hidden sm:block">
+            <div className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur border border-slate-700/60 text-[10px] font-mono text-cyan-300 shadow-lg flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Tip: Click any rocket stage or spacecraft in 3D to inspect payloads</span>
             </div>
           </div>
 
@@ -338,6 +377,61 @@ export function LaunchView({
             </span>
           </div>
 
+          {/* Deep Space Phase Scrubber (active during Deep Space Cruise) */}
+          {deepSpaceActive ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-purple-950/50 border border-purple-800/60 font-mono text-xs">
+              <div className="flex items-center gap-1 text-[11px]">
+                <span className="text-[10px] text-purple-400 font-bold uppercase mr-1">Cruise Phase:</span>
+                <button
+                  onClick={() => setDeepSpacePhase(0.15)}
+                  className={`px-2 py-0.5 rounded border transition-colors ${
+                    deepSpacePhase < 0.33
+                      ? 'bg-purple-600 border-purple-400 text-white font-bold'
+                      : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
+                  }`}
+                >
+                  1: {mission.id === 'pslv-c25-mom' ? 'Earth Departure' : 'Earth Departure'}
+                </button>
+                <button
+                  onClick={() => setDeepSpacePhase(0.5)}
+                  className={`px-2 py-0.5 rounded border transition-colors ${
+                    deepSpacePhase >= 0.33 && deepSpacePhase < 0.67
+                      ? 'bg-purple-600 border-purple-400 text-white font-bold'
+                      : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
+                  }`}
+                >
+                  2: {mission.id === 'pslv-c25-mom' ? 'Heliocentric Cruise' : 'Trans-L1 Transfer'}
+                </button>
+                <button
+                  onClick={() => setDeepSpacePhase(0.85)}
+                  className={`px-2 py-0.5 rounded border transition-colors ${
+                    deepSpacePhase >= 0.67
+                      ? 'bg-purple-600 border-purple-400 text-white font-bold'
+                      : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
+                  }`}
+                >
+                  3: {mission.id === 'pslv-c25-mom' ? 'Mars Insertion (MOI)' : 'L1 Halo Orbit'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-purple-400">Transfer Progress:</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={deepSpacePhase}
+                  onChange={(e) => setDeepSpacePhase(parseFloat(e.target.value))}
+                  className="w-32 accent-purple-500 h-1.5 bg-slate-800 rounded cursor-pointer"
+                />
+                <span className="text-[10px] text-purple-300 w-10 text-right">
+                  {Math.round(deepSpacePhase * 100)}%
+                </span>
+              </div>
+            </div>
+          ) : null}
+
           {/* Controls Bar: Play, Time-Warp & Quick Demo Milestones */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
@@ -377,8 +471,30 @@ export function LaunchView({
               </div>
             </div>
 
-            {/* Quick Demo Milestones & Export CSV Button */}
+            {/* Quick Demo Milestones, Deep-Space Toggle & Export CSV Button */}
             <div className="flex items-center gap-1.5 text-xs font-mono">
+              {/* Deep-Space Cruise Phase Toggle (for MOM & Aditya-L1) */}
+              {isDeepSpaceMission ? (
+                <button
+                  onClick={() => setDeepSpaceActive(!deepSpaceActive)}
+                  className={`px-2.5 py-1 rounded border text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
+                    deepSpaceActive
+                      ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-950/80 animate-pulse'
+                      : 'bg-purple-950/80 border-purple-700 hover:bg-purple-900 text-purple-200'
+                  }`}
+                  title="Toggle Interplanetary / Lagrange Transfer Phase 3D Visualizer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+                  <span>
+                    {deepSpaceActive
+                      ? 'Exit Deep Space'
+                      : mission.id === 'pslv-c25-mom'
+                      ? 'Deep-Space Cruise (→ Mars)'
+                      : 'Deep-Space Cruise (→ Sun-L1)'}
+                  </span>
+                </button>
+              ) : null}
+
               <button
                 onClick={() => exportTelemetryCsv(trajectory, mission.name)}
                 className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"

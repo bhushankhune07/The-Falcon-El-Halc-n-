@@ -7,16 +7,23 @@ import { ExhaustPlume } from './ExhaustPlume';
 import { SriharikotaGround } from './SriharikotaGround';
 import { AtmosphereSky } from './AtmosphereSky';
 import { MissionConfig } from '../../sim';
+import { InspectableComponent } from './inspectData';
 
 interface Props {
   simFrame: SimFrameState;
   cameraMode: CameraMode;
   mission?: MissionConfig;
+  onSelectComponent?: (comp: InspectableComponent) => void;
 }
 
-export function AscentScene({ simFrame, cameraMode, mission }: Props) {
+export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }: Props) {
   const rocketGroupRef = useRef<THREE.Group>(null);
-  const targetCamPosRef = useRef(new THREE.Vector3(-18, 16, 36));
+  const targetCamPosRef = useRef(new THREE.Vector3(-18, 22, 38));
+
+  // Surface-relative downrange calculation (removes initial Earth-rotation drift boost)
+  // v0_earth along 140° azimuth: ~290.87 m/s
+  const v0_earth = 290.87;
+  const surfaceDownrange_m = Math.max(0, simFrame.downrange_m - v0_earth * simFrame.time_s);
 
   // Update rocket pitch tilt smoothly in floating origin
   useFrame((state, delta) => {
@@ -26,8 +33,9 @@ export function AscentScene({ simFrame, cameraMode, mission }: Props) {
     }
 
     if (rocketGroupRef.current) {
-      // 90° = vertical, 0° = horizontal
-      const pitchRad = (simFrame.pitch_deg * Math.PI) / 180.0;
+      // Clamp rocket visual pitch strictly vertical (90°) until altitude > 120m (tower clearance)
+      const visualPitch_deg = simFrame.altitude_m < 120 ? 90.0 : simFrame.pitch_deg;
+      const pitchRad = (visualPitch_deg * Math.PI) / 180.0;
       // Tilt around Z axis: vertical (pitch 90) -> 0 tilt; horizontal (pitch 0) -> -PI/2 tilt
       const targetTiltZ = -(Math.PI / 2.0 - pitchRad);
       rocketGroupRef.current.rotation.z = THREE.MathUtils.damp(
@@ -40,16 +48,19 @@ export function AscentScene({ simFrame, cameraMode, mission }: Props) {
 
     // Dynamic Camera management in floating origin
     if (cameraMode === 'pad') {
-      // Pad tracking camera: looks up from ground at rocket
+      // Pad View: Low-angle broadcast tracking camera positioned at (-52, groundY + 14, 78) looking up at rocket (0, 32, 0)
       const cam = state.camera;
       const groundY = -simFrame.altitude_m;
-      cam.position.set(-45, groundY + 12, 65);
-      cam.lookAt(0, 20, 0);
+      // Smooth upward pan as rocket climbs above 1500m
+      const panY = simFrame.altitude_m < 1500 ? 32 : Math.min(300, 32 + (simFrame.altitude_m - 1500) * 0.1);
+      cam.position.set(-52, groundY + 14, 78);
+      cam.lookAt(0, panY, 0);
     } else if (cameraMode === 'chase') {
-      // Rocket chase camera: smooth follow behind and below
+      // Rocket chase camera: dynamic over-the-shoulder tracking looking down the fuselage toward Sriharikota
       const cam = state.camera;
+      targetCamPosRef.current.set(-18, 22, 38);
       cam.position.lerp(targetCamPosRef.current, delta * 3.0);
-      cam.lookAt(0, 22, 0);
+      cam.lookAt(0, 18, 0);
     }
 
     // Physically motivated camera micro-shake (liftoff acoustic vibration & Max-Q buffeting)
@@ -61,7 +72,7 @@ export function AscentScene({ simFrame, cameraMode, mission }: Props) {
       // Liftoff vibration (T+0.1s to T+12s, tapering smoothly as rocket clears umbilical tower)
       if (t > 0.1 && t <= 12 && simFrame.altitude_m < 600) {
         const liftoffTaper = Math.max(0, 1.0 - (t - 0.1) / 12.0);
-        shakeIntensity += liftoffTaper * (cameraMode === 'pad' ? 0.32 : 0.16);
+        shakeIntensity += liftoffTaper * (cameraMode === 'pad' ? 0.35 : 0.18);
       }
 
       // Max-Q aerodynamic buffeting (dynamicPressure_kPa > 50)
@@ -84,16 +95,20 @@ export function AscentScene({ simFrame, cameraMode, mission }: Props) {
       {/* Dynamic Sky Dome & Stars */}
       <AtmosphereSky altitude_m={simFrame.altitude_m} />
 
-      {/* Receding Ground & Sriharikota Launch Pad */}
+      {/* Receding Ground & Sriharikota Launch Pad (Surface-relative downrange) */}
       <SriharikotaGround
         altitude_m={simFrame.altitude_m}
-        downrange_m={simFrame.downrange_m}
+        downrange_m={surfaceDownrange_m}
         time_s={simFrame.time_s}
       />
 
       {/* 2. Procedural PSLV-XL Staged Vehicle */}
       <group ref={rocketGroupRef} position={[0, 20, 0]}>
-        <ProceduralPSLV simFrame={simFrame} mission={mission} />
+        <ProceduralPSLV
+          simFrame={simFrame}
+          mission={mission}
+          onSelectComponent={onSelectComponent}
+        />
         <ExhaustPlume simFrame={simFrame} stages={mission?.stages} />
       </group>
 

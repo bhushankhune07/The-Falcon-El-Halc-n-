@@ -8,20 +8,36 @@ import {
   getProceduralSolarPanelTexture,
   getProceduralRadarTexture,
 } from './textures/proceduralTextures';
+import { INSPECTABLE_COMPONENTS, InspectableComponent } from './inspectData';
 
 interface Props {
   simFrame: SimFrameState;
   mission?: MissionConfig;
   showInternalPayload?: boolean;
+  onSelectComponent?: (comp: InspectableComponent) => void;
 }
 
-export function ProceduralPSLV({ simFrame, mission }: Props) {
+export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) {
   const rootRef = useRef<THREE.Group>(null);
   const fairingLeftRef = useRef<THREE.Group>(null);
   const fairingRightRef = useRef<THREE.Group>(null);
   const solarLeftRef = useRef<THREE.Group>(null);
   const solarRightRef = useRef<THREE.Group>(null);
   const sarAntennaRef = useRef<THREE.Group>(null);
+
+  const handlePointerOver = (e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    document.body.style.cursor = 'pointer';
+  };
+  const handlePointerOut = () => {
+    document.body.style.cursor = 'auto';
+  };
+  const handleClick = (e: { stopPropagation: () => void }, compId: string) => {
+    e.stopPropagation();
+    if (onSelectComponent && INSPECTABLE_COMPONENTS[compId]) {
+      onSelectComponent(INSPECTABLE_COMPONENTS[compId]);
+    }
+  };
 
   const decalTexture = useMemo(() => getProceduralRocketDecal(), []);
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
@@ -132,6 +148,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
             0,
             simFrame.ps1Detached ? dtPS1 * 0.04 : 0,
           ]}
+          onClick={(e) => handleClick(e, 'ps1_core')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           {/* Main White Body Cylinder */}
           <mesh castShadow receiveShadow>
@@ -189,6 +208,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
             key={cfg.id}
             position={[posX, posY, posZ]}
             rotation={[rotPitch * dirZ, -cfg.angle, rotPitch * dirX]}
+            onClick={(e) => handleClick(e, 'strap_ons')}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
           >
             {/* Cylindrical Booster Body */}
             <mesh castShadow receiveShadow>
@@ -246,6 +268,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
             0,
           ]}
           rotation={[simFrame.ps2Detached ? dtPS2 * 0.05 : 0, 0, 0]}
+          onClick={(e) => handleClick(e, 'ps2_vikas')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           {/* Liquid Propellant Tank (UH25 + N2O4) */}
           <mesh castShadow receiveShadow>
@@ -273,6 +298,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
               : ps1Height + ps2Height + 1.5 + ps3Height / 2,
             0,
           ]}
+          onClick={(e) => handleClick(e, 'ps3_hps3')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           {/* Carbon/Kevlar Filament Wound Case */}
           <mesh castShadow receiveShadow>
@@ -290,7 +318,12 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
       {/* ======================================================== */}
       {/* STAGE 4: PS4 TWIN LIQUID ENGINES (MMH + MON3) */}
       {/* ======================================================== */}
-      <group position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}>
+      <group
+        position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}
+        onClick={(e) => handleClick(e, 'ps4_twin')}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+      >
         {/* Upper Stage Equipment Bay & Tanks */}
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[coreRadius * 0.75, coreRadius * 0.75, ps4Height, 28]} />
@@ -323,13 +356,25 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
       {/* ======================================================== */}
       <group position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 3.2, 0]}>
         {/* Satellite Bus Structure (Gold MLI blanket) */}
-        <mesh castShadow receiveShadow>
+        <mesh
+          castShadow
+          receiveShadow
+          onClick={(e) => handleClick(e, 'eos04_bus')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+        >
           <boxGeometry args={[1.6, 2.2, 1.6]} />
           <meshStandardMaterial color="#eab308" metalness={0.85} roughness={0.25} />
         </mesh>
 
         {/* Deployable Solar Panel Array (Left Wing) */}
-        <group ref={solarLeftRef} position={[-0.8, 0.2, 0]}>
+        <group
+          ref={solarLeftRef}
+          position={[-0.8, 0.2, 0]}
+          onClick={(e) => handleClick(e, 'eos04_solar')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+        >
           <mesh position={[-1.8, 0, 0]}>
             <boxGeometry args={[3.4, 1.4, 0.05]} />
             <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
@@ -337,7 +382,13 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
         </group>
 
         {/* Deployable Solar Panel Array (Right Wing) */}
-        <group ref={solarRightRef} position={[0.8, 0.2, 0]}>
+        <group
+          ref={solarRightRef}
+          position={[0.8, 0.2, 0]}
+          onClick={(e) => handleClick(e, 'eos04_solar')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+        >
           <mesh position={[1.8, 0, 0]}>
             <boxGeometry args={[3.4, 1.4, 0.05]} />
             <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
@@ -345,7 +396,13 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
         </group>
 
         {/* C-band Synthetic Aperture Radar (SAR) Planar Antenna */}
-        <group ref={sarAntennaRef} position={[0, -0.6, 0.85]}>
+        <group
+          ref={sarAntennaRef}
+          position={[0, -0.6, 0.85]}
+          onClick={(e) => handleClick(e, 'eos04_sar')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+        >
           <mesh castShadow>
             <boxGeometry args={[3.2, 1.8, 0.08]} />
             <meshStandardMaterial map={radarTexture} metalness={0.7} roughness={0.3} />
@@ -390,6 +447,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
         <group
           ref={fairingLeftRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
+          onClick={(e) => handleClick(e, 'payload_fairing')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           {/* Outer Shell Cylinder Half */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>
@@ -428,6 +488,9 @@ export function ProceduralPSLV({ simFrame, mission }: Props) {
         <group
           ref={fairingRightRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
+          onClick={(e) => handleClick(e, 'payload_fairing')}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           {/* Outer Shell Cylinder Half */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>

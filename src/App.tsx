@@ -39,6 +39,7 @@ export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [timeWarp, setTimeWarp] = useState<number>(5);
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase');
+  const [isDeepSpaceActive, setIsDeepSpaceActive] = useState<boolean>(false);
   const autoPlayNextRef = useRef<boolean>(false);
 
   // Reset currentTime_s to 0 when modifiers change; pause unless auto-play was explicitly requested
@@ -122,6 +123,14 @@ export default function App() {
     setCurrentTime_s(0);
     setIsPlaying(true);
     setCameraMode('pad');
+    setIsDeepSpaceActive(false);
+    setActiveScreen('launch');
+  };
+
+  // Switch to 3D Deep Space View from Screen 3
+  const handleOpenDeepSpace = () => {
+    setIsDeepSpaceActive(true);
+    setCameraMode('orbit');
     setActiveScreen('launch');
   };
 
@@ -247,6 +256,7 @@ export default function App() {
               setCurrentTime_s(0);
               setIsPlaying(false);
               setCameraMode('pad');
+              setIsDeepSpaceActive(false);
             }}
             modifiers={challengeModifiers}
             onUpdateModifiers={setChallengeModifiers}
@@ -270,6 +280,8 @@ export default function App() {
             cameraMode={cameraMode}
             onSetCameraMode={setCameraMode}
             onSkipToOrbit={() => setActiveScreen('orbit')}
+            deepSpaceActive={isDeepSpaceActive}
+            onToggleDeepSpace={setIsDeepSpaceActive}
           />
         )}
 
@@ -281,6 +293,7 @@ export default function App() {
             onBackToBrief={() => setActiveScreen('brief')}
             onBackToLaunch={() => setActiveScreen('launch')}
             onResetGoldenRun={handleResetGoldenRun}
+            onOpenDeepSpace={handleOpenDeepSpace}
           />
         )}
       </main>

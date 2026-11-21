@@ -328,6 +328,48 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
     ctx.fill();
   }
 
+  // 7. Golden City Night-Lights (India Megacities & Major Global Hubs)
+  const cityLights = [
+    // Indian Subcontinent & Vicinity
+    { lon: 77.2, lat: 28.6, name: 'Delhi NCR', r: 4.5 },
+    { lon: 72.87, lat: 19.07, name: 'Mumbai', r: 4.0 },
+    { lon: 77.59, lat: 12.97, name: 'Bengaluru', r: 3.8 },
+    { lon: 80.27, lat: 13.08, name: 'Chennai', r: 3.5 },
+    { lon: 78.48, lat: 17.38, name: 'Hyderabad', r: 3.5 },
+    { lon: 88.36, lat: 22.57, name: 'Kolkata', r: 3.5 },
+    { lon: 72.57, lat: 23.02, name: 'Ahmedabad', r: 2.8 },
+    { lon: 73.85, lat: 18.52, name: 'Pune', r: 2.5 },
+    { lon: 79.98, lat: 7.95, name: 'Colombo', r: 2.2 },
+    // Global Nodes
+    { lon: 55.27, lat: 25.2, name: 'Dubai', r: 3.2 },
+    { lon: 103.82, lat: 1.35, name: 'Singapore', r: 2.8 },
+    { lon: 139.69, lat: 35.69, name: 'Tokyo', r: 5.0 },
+    { lon: -0.12, lat: 51.5, name: 'London', r: 4.2 },
+    { lon: 2.35, lat: 48.85, name: 'Paris', r: 3.8 },
+    { lon: 31.23, lat: 30.04, name: 'Cairo', r: 3.0 },
+    { lon: -74.0, lat: 40.71, name: 'New York', r: 4.6 },
+    { lon: 151.2, lat: -33.86, name: 'Sydney', r: 3.2 },
+  ];
+
+  for (const city of cityLights) {
+    const cx = toX(city.lon);
+    const cy = toY(city.lat);
+    const grad = ctx.createRadialGradient(cx, cy, 0.5, cx, cy, city.r * 2.2);
+    grad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+    grad.addColorStop(0.35, 'rgba(245, 158, 11, 0.7)');
+    grad.addColorStop(0.7, 'rgba(217, 119, 6, 0.3)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, city.r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, city.r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -536,5 +578,178 @@ export function getProceduralRadarTexture(): THREE.CanvasTexture {
 
   const texture = new THREE.CanvasTexture(canvas);
   cachedRadarTexture = texture;
+  return texture;
+}
+
+let cachedMarsTexture: THREE.CanvasTexture | null = null;
+let cachedSunTexture: THREE.CanvasTexture | null = null;
+let cachedCloudsTexture: THREE.CanvasTexture | null = null;
+
+/**
+ * Procedural Mars Texture with Valles Marineris, Syrtis Major, and CO2 Polar Caps
+ */
+export function getProceduralMarsTexture(): THREE.CanvasTexture {
+  if (cachedMarsTexture) return cachedMarsTexture;
+  const w = 1024;
+  const h = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  // Base Martian rust red & iron-oxide desert
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#78350f');
+  grad.addColorStop(0.3, '#9a3412');
+  grad.addColorStop(0.5, '#c2410c');
+  grad.addColorStop(0.7, '#9a3412');
+  grad.addColorStop(1, '#78350f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  const toX = (lon: number) => ((lon + 180) / 360) * w;
+  const toY = (lat: number) => ((90 - lat) / 180) * h;
+
+  // Dark Basaltic Albedo Markings (Syrtis Major Planum)
+  ctx.fillStyle = '#451a03';
+  ctx.beginPath();
+  ctx.ellipse(toX(70), toY(10), toX(20) - toX(0), toY(0) - toY(14), -0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Acidalia Planitia & Utopia Planitia
+  ctx.beginPath();
+  ctx.ellipse(toX(-35), toY(48), toX(28) - toX(0), toY(0) - toY(12), 0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Valles Marineris Canyon System (4,000 km grand canyon gash)
+  ctx.strokeStyle = '#291002';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(toX(-95), toY(-12));
+  ctx.bezierCurveTo(toX(-75), toY(-14), toX(-55), toY(-10), toX(-30), toY(-16));
+  ctx.stroke();
+
+  // Olympus Mons Caldera
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.arc(toX(-133), toY(18), 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#451a03';
+  ctx.beginPath();
+  ctx.arc(toX(-133), toY(18), 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Impact craters
+  for (let c = 0; c < 35; c++) {
+    const cx = (c * 37) % w;
+    const cy = toY(-50 + ((c * 23) % 90));
+    ctx.strokeStyle = '#572506';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3 + (c % 8), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // North & South Carbon-Dioxide / Water Polar Ice Caps
+  ctx.fillStyle = '#f8fafc';
+  // North Pole Ice Cap
+  ctx.beginPath();
+  ctx.ellipse(w / 2, toY(86), w * 0.45, toY(0) - toY(8), 0, 0, Math.PI * 2);
+  ctx.fill();
+  // South Pole Ice Cap
+  ctx.beginPath();
+  ctx.ellipse(w / 2, toY(-86), w * 0.4, toY(0) - toY(7), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  cachedMarsTexture = texture;
+  return texture;
+}
+
+/**
+ * Procedural Sun Texture with turbulent solar granules, chromosphere and sunspots
+ */
+export function getProceduralSunTexture(): THREE.CanvasTexture {
+  if (cachedSunTexture) return cachedSunTexture;
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // Radiant Solar Photosphere base
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 20, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, '#fef9c3');  // Incandescent white-yellow core
+  grad.addColorStop(0.4, '#fde047'); // Bright yellow chromosphere
+  grad.addColorStop(0.75, '#f59e0b');// Deep orange plasma
+  grad.addColorStop(0.92, '#ea580c');// Turbulent magnetic rim
+  grad.addColorStop(1, '#b91c1c');   // Limb darkening
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Solar Granulation Noise (convection cells)
+  for (let g = 0; g < 400; g++) {
+    const gx = Math.random() * size;
+    const gy = Math.random() * size;
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(254, 240, 138, 0.4)' : 'rgba(217, 119, 6, 0.25)';
+    ctx.beginPath();
+    ctx.arc(gx, gy, 2 + Math.random() * 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Active Sunspot Regions (Penumbra & Umbra)
+  const spots = [
+    { x: size * 0.38, y: size * 0.42, r: 10 },
+    { x: size * 0.42, y: size * 0.44, r: 6 },
+    { x: size * 0.65, y: size * 0.55, r: 8 },
+  ];
+  for (const s of spots) {
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  cachedSunTexture = texture;
+  return texture;
+}
+
+/**
+ * Procedural Cloud Texture for Earth atmosphere shell
+ */
+export function getProceduralCloudsTexture(): THREE.CanvasTexture {
+  if (cachedCloudsTexture) return cachedCloudsTexture;
+  const w = 1024;
+  const h = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+
+  for (let c = 0; c < 70; c++) {
+    const cx = (c * 67) % w;
+    const cy = (c * 31) % h;
+    const rx = 25 + (c % 15) * 4;
+    const ry = 8 + (c % 9) * 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, (c * 0.3) % Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  cachedCloudsTexture = texture;
   return texture;
 }

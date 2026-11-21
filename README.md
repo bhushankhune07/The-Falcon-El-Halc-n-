@@ -94,29 +94,38 @@ flowchart TD
   * `pslv_c25_mom.json` (Mangalyaan Earth Parking-Orbit phase).
   * `pslv_c57_aditya_l1.json` (Aditya-L1 Earth Parking-Orbit phase).
 
-### 2. 100% Procedural 3D Scenes (Two-Scene Architecture)
+### 2. 100% Procedural 3D Scenes (Two-Scene Architecture + Deep Space)
 - **Zero external `.glb/.gltf` model files** (eliminating CORS and network failures).
 - **Scene A — Floating-Origin Ascent Scene (0–120 km)**:
   * Eliminates 32-bit floating-point jitter by pinning the rocket near world origin while the launchpad, Sriharikota coastline, and atmospheric sky dome recede.
+  * Reconstructed Sriharikota First Launch Pad (FLP): Elevated pedestal, launch ring, 4 hold-down clamps, twin flame trenches with central deflector wedge, 54m red umbilical tower with 3 retracting swing arms (T+0..3s), MST rail tracks, white propellant storage spheres, blast walls, 4 lightning masts, instanced coastal treeline, Bay of Bengal water plane, and multi-layered cloud deck (3,000–8,000 m).
   * Procedural PSLV-XL: S12 strap-on radial separation, PS1/PS2/PS3 staging, clamshell fairing separation, and dynamic throttle-scaled exhaust plumes.
 - **Scene B — Scaled 3D Earth Orbit Scene (>120 km)**:
-  * Procedural 3D Earth globe with canvas-rendered Indian subcontinent, atmospheric rim glow, and 97.6° inclined SSO orbit track.
+  * Procedural 3D Earth globe with canvas-rendered Indian subcontinent, golden night-lights on the night side, rotating cloud deck, Rayleigh-scattering atmospheric rim glow, and 97.6° inclined SSO orbit track.
   * When orbit is achieved: EOS-04 unfolds dual solar panels, deploys planar SAR antenna, and sweeps a translucent **C-band radar swath cone** over India.
+- **Interactive Clickable 3D Payload & Stage Inspector**:
+  * Click any rocket stage or spacecraft component in 3D to open an authentic ISRO engineering drawer with mass budgets, propellant types, thrust/Isp, and scientific instrument breakdowns.
+- **Schematic Deep-Space Transfer Phase Visualizers (MOM & Aditya-L1)**:
+  * **Mangalyaan (PSLV-C25)**: Earth departure burns → golden dashed Hohmann TMI transfer arc → 3D Mars with polar ice caps & Valles Marineris → elliptical Mars capture orbit + 3D MOM spacecraft (MCC, TIS, MSM, LAP, MENCA).
+  * **Aditya-L1 (PSLV-C57)**: Earth departure → Trans-L1 transfer → 3D Halo Orbit loop around Sun-Earth L1 (1.5M km) → glowing 3D Sun with granulated photosphere and volumetric corona glow + 3D Aditya-L1 spacecraft (VELC, SUIT, SoLEXS, HEL1OS, ASPEX, PAPA, MAG).
 
 ### 3. Screen 1: Pre-Launch Brief
 - Interactive mission architecture selector.
 - Mode toggle: **Auto-Guidance (Golden Run)** vs. **Challenge Mode** (sliders for Payload Mass Delta, Pitch Kick Bias, and synthetic Wind Scenarios).
-- OpenStreetMap Leaflet map displaying SDSC Sriharikota launchpad, computed downrange ground track, and indicative booster splashdown hazard corridors in the Bay of Bengal.
+- OpenStreetMap Leaflet map displaying SDSC Sriharikota launchpad, computed downrange ground track, indicative booster splashdown hazard corridors in the Bay of Bengal, and an interactive NRSC Bhuvan reference overlay.
 
 ### 4. Screen 2: 3D Launch & Fit Residuals Telemetry
 - Split mission control viewport: Left 3D Canvas + Right Telemetry Sidebar.
+- Multi-camera director: Pad View (tracking FLP tower clearance), Chase View (over-the-shoulder), Booster Cam (looking aft at nozzles), and Orbit View.
 - Recharts overlay comparing simulated Altitude & Velocity curves against published ISRO milestones with fit residual error badges.
 - Flight loads monitoring: continuous dynamic pressure (Max-Q) and sensed acceleration in G's.
+- Synthesized Web Audio API procedural rocket engine rumble.
 
 ### 5. Screen 3: Orbit & Bhoonidhi SAR Data Explorer
 - Real-time Orbit Insertion verdict banner (Pass/Fail diagnosis of gravity drag and propellant margins for EOS-04).
-- NRSC Bhoonidhi metadata product viewer (**MRS**, **Level-2 GeoTIFF**, Dual-Pol HH+HV, 25m resolution, 115 km swath).
-- Leaflet scene bounding box over the Krishna-Godavari agricultural belt and procedural C-band SAR backscatter visual simulation.
+- 3-Region Swath Explorer: Krishna-Godavari Basin (Andhra Pradesh), Brahmaputra Floodplain (Assam), and Sundarbans Delta (West Bengal).
+- Tailored C-band SAR radar backscatter canvas simulation (HH+HV dual-pol, -25 dB to 0 dB scale) with burned-in synthetic watermarks.
+- 4-Portal ISRO Earth Observation Ecosystem Hub: NRSC Bhoonidhi, NRSC Bhuvan, SAC MOSDAC, and SAC VEDAS with direct links and domain roles.
 
 ---
 
@@ -181,7 +190,8 @@ Every displayed metric and asset is classified under our transparent three-tier 
   - Challenge Mode wind perturbation presets (*explicitly synthetic scenarios, not MOSDAC data*).
   - Computed Bay of Bengal booster splashdown hazard corridors (*indicative model output, not official range safety hazard areas*).
   - Continuous Max-Q and Sensed G-force curves (*derived from RK4 equations; not published in mission brochure*).
-  - Procedural 3D geometries, particle plumes, and SAR backscatter preview canvas.
+  - Procedural 3D FLP launchpad, umbilical tower, Earth night-lights & SAR backscatter preview canvas.
+  - Schematic Deep-Space Transfer Phase (MOM Mars transfer arc & Aditya-L1 Sun-L1 halo orbit; ascent physics = RK4).
 
 ### Model Simplifications
 1. **2D Planar Ascent**: Motion is integrated in a 2D launch plane along Sriharikota's 140° azimuth. The coastal dogleg maneuver performed around Sri Lanka to prevent land overflight is not modelled.
