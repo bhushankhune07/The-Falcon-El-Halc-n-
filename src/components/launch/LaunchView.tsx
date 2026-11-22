@@ -131,8 +131,9 @@ export function LaunchView({
   const altKm = currentState.altitude_m / 1000.0;
   const callout = getFlightDirectorCallout(currentTime_s, maxTime_s);
 
-  // Inspector & Deep Space states
+  // Inspector & Deep Space & Blueprint states
   const [selectedComponent, setSelectedComponent] = useState<InspectableComponent | null>(null);
+  const [blueprintMode, setBlueprintMode] = useState(false);
   const [internalDeepSpaceActive, setInternalDeepSpaceActive] = useState(false);
   const deepSpaceActive = controlledDeepSpaceActive !== undefined ? controlledDeepSpaceActive : internalDeepSpaceActive;
   const setDeepSpaceActive = onToggleDeepSpace ?? setInternalDeepSpaceActive;
@@ -202,6 +203,8 @@ export function LaunchView({
             onCameraModeChange={onSetCameraMode}
             deepSpaceActive={deepSpaceActive}
             deepSpacePhase={deepSpacePhase}
+            blueprintMode={blueprintMode}
+            onToggleBlueprint={() => setBlueprintMode(!blueprintMode)}
             onSelectComponent={setSelectedComponent}
           />
 
@@ -445,10 +448,10 @@ export function LaunchView({
               <button
                 onClick={() => {
                   onSeek(0);
-                  onSetCameraMode('pad');
+                  onSetCameraMode('auto');
                 }}
                 className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                title="Reset to T-0"
+                title="Reset to T-0 Broadcast Cam"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -504,7 +507,7 @@ export function LaunchView({
                 <span>Export CSV</span>
               </button>
               <button
-                onClick={() => jumpTo(0, 'pad')}
+                onClick={() => jumpTo(0, 'auto')}
                 className="px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 transition-colors"
               >
                 T-0

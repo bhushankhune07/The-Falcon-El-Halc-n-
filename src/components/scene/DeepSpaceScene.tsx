@@ -13,9 +13,10 @@ interface Props {
   missionId: string; // 'pslv-c25-mom' | 'pslv-c57-aditya-l1'
   phaseProgress: number; // 0.0 to 1.0 (Phase 1 -> Phase 2 -> Phase 3)
   onSelectComponent?: (comp: InspectableComponent) => void;
+  onHoverComponent?: (comp: InspectableComponent | null) => void;
 }
 
-export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: Props) {
+export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent, onHoverComponent }: Props) {
   const marsRef = useRef<THREE.Mesh>(null);
   const sunRef = useRef<THREE.Mesh>(null);
   const coronaRef = useRef<THREE.Mesh>(null);
@@ -28,12 +29,18 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
   const isMOM = missionId === 'pslv-c25-mom';
   const isAditya = missionId === 'pslv-c57-aditya-l1';
 
-  const handlePointerOver = (e: { stopPropagation: () => void }) => {
+  const handlePointerOver = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
     document.body.style.cursor = 'pointer';
+    if (onHoverComponent && INSPECTABLE_COMPONENTS[compId]) {
+      onHoverComponent(INSPECTABLE_COMPONENTS[compId]);
+    }
   };
   const handlePointerOut = () => {
     document.body.style.cursor = 'auto';
+    if (onHoverComponent) {
+      onHoverComponent(null);
+    }
   };
   const handleClick = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
@@ -209,7 +216,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
               castShadow
               receiveShadow
               onClick={(e) => handleClick(e, 'mom_bus')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_bus')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[2.2, 2.2, 2.2]} />
@@ -220,8 +227,8 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <group
               position={[0, 1.4, 0.4]}
               rotation={[Math.PI * 0.3, 0, 0]}
-              onClick={(e) => handleClick(e, 'mom_bus')}
-              onPointerOver={handlePointerOver}
+              onClick={(e) => handleClick(e, 'mom_dish')}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_dish')}
               onPointerOut={handlePointerOut}
             >
               <mesh>
@@ -239,7 +246,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <group
               position={[-2.8, 0, 0]}
               onClick={(e) => handleClick(e, 'mom_bus')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_bus')}
               onPointerOut={handlePointerOut}
             >
               <mesh position={[-1.8, 0, 0]}>
@@ -258,7 +265,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[0.8, 0.4, 1.15]}
               onClick={(e) => handleClick(e, 'mom_mcc')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_mcc')}
               onPointerOut={handlePointerOut}
             >
               <cylinderGeometry args={[0.2, 0.22, 0.5, 12]} />
@@ -269,7 +276,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[-0.8, 0.4, 1.15]}
               onClick={(e) => handleClick(e, 'mom_tis')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_tis')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[0.35, 0.35, 0.4]} />
@@ -280,7 +287,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[0.5, -0.5, 1.15]}
               onClick={(e) => handleClick(e, 'mom_msm')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_msm')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[0.3, 0.3, 0.3]} />
@@ -291,7 +298,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[-0.5, -0.5, 1.15]}
               onClick={(e) => handleClick(e, 'mom_lap')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_lap')}
               onPointerOut={handlePointerOut}
             >
               <cylinderGeometry args={[0.12, 0.12, 0.45, 8]} />
@@ -302,7 +309,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[0, -1.0, 1.15]}
               onClick={(e) => handleClick(e, 'mom_menca')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'mom_menca')}
               onPointerOut={handlePointerOut}
             >
               <cylinderGeometry args={[0.15, 0.15, 0.6, 12]} />
@@ -373,7 +380,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
               castShadow
               receiveShadow
               onClick={(e) => handleClick(e, 'aditya_velc')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[2.0, 2.2, 2.0]} />
@@ -385,7 +392,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <group
               position={[0, 0, -2.2]}
               onClick={(e) => handleClick(e, 'aditya_velc')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
               onPointerOut={handlePointerOut}
             >
               <mesh position={[0, 0, -1.8]}>
@@ -397,7 +404,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <group
               position={[0, 0, 2.2]}
               onClick={(e) => handleClick(e, 'aditya_velc')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
               onPointerOut={handlePointerOut}
             >
               <mesh position={[0, 0, 1.8]}>
@@ -411,7 +418,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
               position={[1.15, 0.5, 0]}
               rotation={[0, 0, -Math.PI / 2]}
               onClick={(e) => handleClick(e, 'aditya_velc')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
               onPointerOut={handlePointerOut}
             >
               <mesh>
@@ -430,7 +437,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
               position={[1.15, -0.4, 0.45]}
               rotation={[0, 0, -Math.PI / 2]}
               onClick={(e) => handleClick(e, 'aditya_suit')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_suit')}
               onPointerOut={handlePointerOut}
             >
               <cylinderGeometry args={[0.25, 0.28, 0.6, 16]} />
@@ -441,7 +448,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[1.15, -0.4, -0.45]}
               onClick={(e) => handleClick(e, 'aditya_solexs')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_solexs')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[0.3, 0.4, 0.5]} />
@@ -452,7 +459,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <mesh
               position={[0, 1.2, 0.4]}
               onClick={(e) => handleClick(e, 'aditya_aspex')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_aspex')}
               onPointerOut={handlePointerOut}
             >
               <cylinderGeometry args={[0.2, 0.2, 0.4, 12]} />
@@ -463,7 +470,7 @@ export function DeepSpaceScene({ missionId, phaseProgress, onSelectComponent }: 
             <group
               position={[-1.1, 0, 0]}
               onClick={(e) => handleClick(e, 'aditya_mag')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'aditya_mag')}
               onPointerOut={handlePointerOut}
             >
               {/* Long composite boom extending aft (-X) */}

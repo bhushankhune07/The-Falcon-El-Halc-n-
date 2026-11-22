@@ -20,7 +20,9 @@ interface Props {
   };
   deepSpaceActive?: boolean;
   deepSpacePhase?: number; // 0..1
+  blueprintMode?: boolean;
   onSelectComponent?: (comp: InspectableComponent) => void;
+  onHoverComponent?: (comp: InspectableComponent | null) => void;
 }
 
 /**
@@ -88,12 +90,16 @@ export function OrbitScene({
   targetOrbit,
   deepSpaceActive = false,
   deepSpacePhase = 0.5,
+  blueprintMode = false,
   onSelectComponent,
+  onHoverComponent,
 }: Props) {
   const satelliteGroupRef = useRef<THREE.Group>(null);
   const radarConeRef = useRef<THREE.Mesh>(null);
   const radarFootprintRef = useRef<THREE.Mesh>(null);
   const solarWingsRef = useRef<THREE.Group>(null);
+  const sarAntennaRef = useRef<THREE.Group>(null);
+  const ps4GroupRef = useRef<THREE.Group>(null);
 
   const targetVecRef = useRef(new THREE.Vector3());
   const normVecRef = useRef(new THREE.Vector3());
@@ -111,12 +117,23 @@ export function OrbitScene({
 
   const orbitRadius = earthRadius + (Math.max(120000, simFrame.altitude_m) / 6378137.0) * earthRadius;
 
-  const handlePointerOver = (e: { stopPropagation: () => void }) => {
+  // Post-Cutoff Commissioning Elapsed Time
+  const ps4Stage = mission?.stages?.find((s) => s.type === 'ps4');
+  const cutoffTime = ps4Stage ? ps4Stage.ignitionTime_s + ps4Stage.burnDuration_s : 1029.0;
+  const dtCutoff = simFrame.ps4Cutoff ? Math.max(0, simFrame.time_s - cutoffTime) : 0;
+
+  const handlePointerOver = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
     document.body.style.cursor = 'pointer';
+    if (onHoverComponent && INSPECTABLE_COMPONENTS[compId]) {
+      onHoverComponent(INSPECTABLE_COMPONENTS[compId]);
+    }
   };
   const handlePointerOut = () => {
     document.body.style.cursor = 'auto';
+    if (onHoverComponent) {
+      onHoverComponent(null);
+    }
   };
   const handleClick = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
@@ -182,7 +199,35 @@ export function OrbitScene({
       satelliteGroupRef.current.lookAt(targetVecRef.current);
     }
 
-    const isRadarActive = simFrame.ps4Cutoff;
+    // Step 1: PS4 Upper Stage separation drift (backward along Z axis)
+    if (ps4GroupRef.current) {
+      const targetPs4Z = simFrame.ps4Cutoff ? -1.2 - Math.min(28.0, dtCutoff * 4.2) : -1.2;
+      const targetPs4Y = simFrame.ps4Cutoff ? -Math.min(8.0, dtCutoff * 0.8) : 0;
+      ps4GroupRef.current.position.z = THREE.MathUtils.damp(ps4GroupRef.current.position.z, targetPs4Z, 4.0, delta);
+      ps4GroupRef.current.position.y = THREE.MathUtils.damp(ps4GroupRef.current.position.y, targetPs4Y, 4.0, delta);
+    }
+
+    // Step 2: Solar Array Deployment (hinges outward from 0° to 90° over 3 seconds, dtCutoff >= 3s)
+    if (solarWingsRef.current) {
+      const targetScale = !simFrame.ps4Cutoff
+        ? 0.05
+        : dtCutoff < 3.0
+        ? 0.05
+        : Math.min(1.0, 0.05 + ((dtCutoff - 3.0) / 3.0) * 0.95);
+      solarWingsRef.current.scale.x = THREE.MathUtils.damp(solarWingsRef.current.scale.x, targetScale, 3.0, delta);
+    }
+
+    // Step 3: Instrument Activation (EOS-04 C-SAR antenna unfolds & activates radar cone)
+    if (sarAntennaRef.current) {
+      const targetRot = !simFrame.ps4Cutoff
+        ? 0.0
+        : dtCutoff < 5.5
+        ? 0.0
+        : Math.min(Math.PI * 0.22, ((dtCutoff - 5.5) / 2.0) * (Math.PI * 0.22));
+      sarAntennaRef.current.rotation.x = THREE.MathUtils.damp(sarAntennaRef.current.rotation.x, targetRot, 2.5, delta);
+    }
+
+    const isRadarActive = simFrame.ps4Cutoff && dtCutoff >= 6.5;
 
     if (radarConeRef.current) {
       radarConeRef.current.visible = isRadarActive;
@@ -201,16 +246,6 @@ export function OrbitScene({
         radarFootprintRef.current.lookAt(originRef.current);
       }
     }
-
-    if (solarWingsRef.current) {
-      const targetScale = isRadarActive ? 1.0 : 0.1;
-      solarWingsRef.current.scale.x = THREE.MathUtils.damp(
-        solarWingsRef.current.scale.x,
-        targetScale,
-        3.0,
-        delta
-      );
-    }
   });
 
   const isDeepSpaceMission = mission?.id === 'pslv-c25-mom' || mission?.id === 'pslv-c57-aditya-l1';
@@ -226,6 +261,7 @@ export function OrbitScene({
           missionId={mission.id}
           phaseProgress={deepSpacePhase}
           onSelectComponent={onSelectComponent}
+          onHoverComponent={onHoverComponent}
         />
       ) : (
         /* Standard Earth Orbit View (EOS-04 & Ascent Parking Orbits) */
@@ -238,56 +274,119 @@ export function OrbitScene({
 
           {/* 3. Upper Stage PS4 + Satellite in Orbit */}
           <group ref={satelliteGroupRef}>
-            {/* Upper Stage PS4 Tank (if not yet separated/cutoff) */}
-            {!simFrame.ps4Cutoff ? (
-              <mesh position={[0, 0, -1.2]}>
+            {/* Upper Stage PS4 Tank (visibly drifts backward after separation) */}
+            <group
+              ref={ps4GroupRef}
+              position={[0, 0, -1.2]}
+              onClick={(e) => handleClick(e, 'ps4_twin')}
+              onPointerOver={(e) => handlePointerOver(e, 'ps4_twin')}
+              onPointerOut={handlePointerOut}
+            >
+              <mesh>
                 <cylinderGeometry args={[0.5, 0.5, 1.4, 16]} />
-                <meshStandardMaterial color="#64748b" metalness={0.8} />
+                {blueprintMode ? (
+                  <meshStandardMaterial
+                    wireframe
+                    color="#00f0ff"
+                    emissive="#00f0ff"
+                    emissiveIntensity={0.5}
+                    transparent
+                    opacity={0.8}
+                  />
+                ) : (
+                  <meshStandardMaterial color="#64748b" metalness={0.8} />
+                )}
               </mesh>
-            ) : null}
+            </group>
 
-            {/* Spacecraft Main Body (Gold Thermal MLI) - Clickable */}
+            {/* Spacecraft Main Body (Gold Thermal MLI or Blueprint Wireframe) - Clickable */}
             <mesh
               castShadow
               onClick={(e) => handleClick(e, 'eos04_bus')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'eos04_bus')}
               onPointerOut={handlePointerOut}
             >
               <boxGeometry args={[1.2, 1.4, 1.0]} />
-              <meshStandardMaterial color="#eab308" metalness={0.9} roughness={0.2} />
+              {blueprintMode ? (
+                <meshStandardMaterial
+                  wireframe
+                  color="#00f0ff"
+                  emissive="#00f0ff"
+                  emissiveIntensity={0.6}
+                  transparent
+                  opacity={0.88}
+                />
+              ) : (
+                <meshStandardMaterial color="#eab308" metalness={0.9} roughness={0.2} />
+              )}
             </mesh>
 
             {/* Deployable Solar Panel Wings - Clickable */}
             <group
               ref={solarWingsRef}
-              scale={[0.1, 1, 1]}
+              scale={[0.05, 1, 1]}
               onClick={(e) => handleClick(e, 'eos04_solar')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'eos04_solar')}
               onPointerOut={handlePointerOut}
             >
               {/* Left Wing */}
               <mesh position={[-2.2, 0, 0]}>
                 <boxGeometry args={[2.8, 1.0, 0.04]} />
-                <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
+                {blueprintMode ? (
+                  <meshStandardMaterial
+                    wireframe
+                    color="#00f0ff"
+                    emissive="#00f0ff"
+                    emissiveIntensity={0.5}
+                    transparent
+                    opacity={0.8}
+                  />
+                ) : (
+                  <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
+                )}
               </mesh>
               {/* Right Wing */}
               <mesh position={[2.2, 0, 0]}>
                 <boxGeometry args={[2.8, 1.0, 0.04]} />
-                <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
+                {blueprintMode ? (
+                  <meshStandardMaterial
+                    wireframe
+                    color="#00f0ff"
+                    emissive="#00f0ff"
+                    emissiveIntensity={0.5}
+                    transparent
+                    opacity={0.8}
+                  />
+                ) : (
+                  <meshStandardMaterial map={solarTexture} metalness={0.6} roughness={0.2} />
+                )}
               </mesh>
             </group>
 
             {/* C-band Synthetic Aperture Radar (SAR) Antenna Planar Array - Clickable */}
-            <mesh
+            <group
+              ref={sarAntennaRef}
               position={[0, -0.6, 0.5]}
-              rotation={[Math.PI * 0.2, 0, 0]}
               onClick={(e) => handleClick(e, 'eos04_sar')}
-              onPointerOver={handlePointerOver}
+              onPointerOver={(e) => handlePointerOver(e, 'eos04_sar')}
               onPointerOut={handlePointerOut}
             >
-              <boxGeometry args={[2.4, 1.2, 0.06]} />
-              <meshStandardMaterial map={radarTexture} metalness={0.7} roughness={0.3} />
-            </mesh>
+              <mesh>
+                <boxGeometry args={[2.4, 1.2, 0.06]} />
+                {blueprintMode ? (
+                  <meshStandardMaterial
+                    wireframe
+                    color="#00f0ff"
+                    emissive="#00f0ff"
+                    emissiveIntensity={0.7}
+                    transparent
+                    opacity={0.88}
+                  />
+                ) : (
+                  <meshStandardMaterial map={radarTexture} metalness={0.7} roughness={0.3} />
+                )}
+              </mesh>
+            </group>
 
             {/* Radar Swath Cone: Translucent beam sweeping down to Earth */}
             <mesh
@@ -307,6 +406,31 @@ export function OrbitScene({
               />
             </mesh>
 
+            {/* Blueprint 3D Dimension Callout Annotations */}
+            {blueprintMode ? (
+              <group>
+                {/* Horizontal Solar Span Dimension Line */}
+                <mesh position={[0, 1.2, 0]}>
+                  <boxGeometry args={[7.2, 0.02, 0.02]} />
+                  <meshBasicMaterial color="#00f0ff" />
+                </mesh>
+                <mesh position={[-3.6, 1.2, 0]}>
+                  <boxGeometry args={[0.02, 0.3, 0.02]} />
+                  <meshBasicMaterial color="#00f0ff" />
+                </mesh>
+                <mesh position={[3.6, 1.2, 0]}>
+                  <boxGeometry args={[0.02, 0.3, 0.02]} />
+                  <meshBasicMaterial color="#00f0ff" />
+                </mesh>
+
+                {/* Vertical Bus Dimension Line */}
+                <mesh position={[-1.2, 0, 0]}>
+                  <boxGeometry args={[0.02, 1.8, 0.02]} />
+                  <meshBasicMaterial color="#00f0ff" />
+                </mesh>
+              </group>
+            ) : null}
+
             {/* Status beacon light */}
             <pointLight color="#38bdf8" intensity={1.5} distance={15} />
           </group>
@@ -324,9 +448,11 @@ export function OrbitScene({
             />
           </mesh>
 
-          {/* Earth Orbit Directional Sun & Ambient Lighting */}
-          <ambientLight intensity={0.28} />
-          <directionalLight position={[200, 300, 150]} intensity={2.2} />
+          {/* Earth Orbit Directional Sun & Ambient Lighting (Rich, Bright & Clear) */}
+          <ambientLight intensity={0.75} />
+          <hemisphereLight args={['#60a5fa', '#0f172a', 0.9]} />
+          <directionalLight position={[180, 220, 160]} intensity={3.2} />
+          <directionalLight position={[-150, -80, -120]} intensity={0.6} color="#38bdf8" />
         </group>
       )}
     </group>

@@ -5,7 +5,7 @@
 
 import { MissionConfig, StageDefinition, FairingDefinition } from '../../sim';
 
-export type CameraMode = 'chase' | 'pad' | 'orbit';
+export type CameraMode = 'auto' | 'chase' | 'pad' | 'orbit';
 
 export interface SimFrameState {
   time_s: number;

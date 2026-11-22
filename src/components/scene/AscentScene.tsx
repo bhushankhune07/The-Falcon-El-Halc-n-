@@ -14,15 +14,26 @@ interface Props {
   cameraMode: CameraMode;
   mission?: MissionConfig;
   onSelectComponent?: (comp: InspectableComponent) => void;
+  onHoverComponent?: (comp: InspectableComponent | null) => void;
 }
 
-export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }: Props) {
+export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent, onHoverComponent }: Props) {
   const rocketGroupRef = useRef<THREE.Group>(null);
   const targetCamPosRef = useRef(new THREE.Vector3(-18, 22, 38));
+  const autoCamPosRef = useRef(new THREE.Vector3(-48, 18, 72));
+  const autoLookAtRef = useRef(new THREE.Vector3(0, 32, 0));
 
   // Surface-relative downrange calculation (removes initial Earth-rotation drift boost)
-  // v0_earth along 140° azimuth: ~290.87 m/s
-  const v0_earth = 290.87;
+  // v0_earth is computed dynamically from the active mission's launch site coordinates and azimuth
+  const OMEGA_EARTH = 7.2921159e-5;
+  const R_EARTH = 6.378137e6;
+  const azimuth_deg = mission?.launchSite?.azimuth_deg ?? 140.0;
+  const lat_deg = mission?.launchSite?.latitude_deg ?? 13.7199;
+  const v0_earth =
+    OMEGA_EARTH *
+    R_EARTH *
+    Math.cos((lat_deg * Math.PI) / 180.0) *
+    Math.sin((azimuth_deg * Math.PI) / 180.0);
   const surfaceDownrange_m = Math.max(0, simFrame.downrange_m - v0_earth * simFrame.time_s);
 
   // Update rocket pitch tilt smoothly in floating origin
@@ -33,8 +44,11 @@ export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }
     }
 
     if (rocketGroupRef.current) {
-      // Clamp rocket visual pitch strictly vertical (90°) until altitude > 120m (tower clearance)
-      const visualPitch_deg = simFrame.altitude_m < 120 ? 90.0 : simFrame.pitch_deg;
+      // Smooth cubic blend factor: t = clamp((altitude_m - 80) / 420, 0, 1); blend = t * t * (3 - 2 * t)
+      // Clamps dead-vertical (90°) while clearing the 54m umbilical tower, then pitches over smoothly
+      const tBlend = Math.min(1.0, Math.max(0.0, (simFrame.altitude_m - 80.0) / 420.0));
+      const blend = tBlend * tBlend * (3.0 - 2.0 * tBlend);
+      const visualPitch_deg = THREE.MathUtils.lerp(90.0, simFrame.pitch_deg, blend);
       const pitchRad = (visualPitch_deg * Math.PI) / 180.0;
       // Tilt around Z axis: vertical (pitch 90) -> 0 tilt; horizontal (pitch 0) -> -PI/2 tilt
       const targetTiltZ = -(Math.PI / 2.0 - pitchRad);
@@ -47,14 +61,46 @@ export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }
     }
 
     // Dynamic Camera management in floating origin
-    if (cameraMode === 'pad') {
-      // Pad View: Low-angle broadcast tracking camera positioned at (-52, groundY + 14, 78) looking up at rocket (0, 32, 0)
+    const isAuto = cameraMode === 'auto' || cameraMode === 'pad';
+    if (isAuto) {
+      // Broadcast Auto-Cam: Starts at hero low-angle shot framing the rocket, red umbilical tower,
+      // and Bay of Bengal shoreline (-48, groundY + 18, 72).
+      // Smoothly tracks upward as the rocket clears the tower, then seamlessly glides into
+      // a cinematic over-the-shoulder chase framing above 1.2 km (1200m).
       const cam = state.camera;
       const groundY = -simFrame.altitude_m;
-      // Smooth upward pan as rocket climbs above 1500m
-      const panY = simFrame.altitude_m < 1500 ? 32 : Math.min(300, 32 + (simFrame.altitude_m - 1500) * 0.1);
-      cam.position.set(-52, groundY + 14, 78);
-      cam.lookAt(0, panY, 0);
+
+      if (simFrame.altitude_m < 1200) {
+        const climbRatio = Math.min(1.0, simFrame.altitude_m / 1200.0);
+        const smoothRatio = climbRatio * climbRatio * (3.0 - 2.0 * climbRatio);
+        
+        // Interpolate camera position from pad tracking to high-ascent chase
+        const padX = -48;
+        const padY = groundY + 18;
+        const padZ = 72;
+
+        const chaseX = -18;
+        const chaseY = 22;
+        const chaseZ = 38;
+
+        autoCamPosRef.current.set(
+          THREE.MathUtils.lerp(padX, chaseX, smoothRatio),
+          THREE.MathUtils.lerp(padY, chaseY, smoothRatio),
+          THREE.MathUtils.lerp(padZ, chaseZ, smoothRatio)
+        );
+
+        // Smooth upward pan on rocket target
+        const lookY = THREE.MathUtils.lerp(32, 20, smoothRatio);
+        autoLookAtRef.current.set(0, lookY, 0);
+
+        cam.position.copy(autoCamPosRef.current);
+        cam.lookAt(autoLookAtRef.current);
+      } else {
+        // High ascent: Steady over-the-shoulder chase view
+        targetCamPosRef.current.set(-18, 22, 38);
+        cam.position.lerp(targetCamPosRef.current, delta * 3.0);
+        cam.lookAt(0, 18, 0);
+      }
     } else if (cameraMode === 'chase') {
       // Rocket chase camera: dynamic over-the-shoulder tracking looking down the fuselage toward Sriharikota
       const cam = state.camera;
@@ -65,14 +111,14 @@ export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }
 
     // Physically motivated camera micro-shake (liftoff acoustic vibration & Max-Q buffeting)
     // Zero shake when paused (delta === 0)
-    if (delta > 0.0001 && (cameraMode === 'pad' || cameraMode === 'chase')) {
+    if (delta > 0.0001 && (isAuto || cameraMode === 'chase')) {
       const t = simFrame.time_s;
       let shakeIntensity = 0;
 
       // Liftoff vibration (T+0.1s to T+12s, tapering smoothly as rocket clears umbilical tower)
       if (t > 0.1 && t <= 12 && simFrame.altitude_m < 600) {
         const liftoffTaper = Math.max(0, 1.0 - (t - 0.1) / 12.0);
-        shakeIntensity += liftoffTaper * (cameraMode === 'pad' ? 0.35 : 0.18);
+        shakeIntensity += liftoffTaper * (isAuto ? 0.35 : 0.18);
       }
 
       // Max-Q aerodynamic buffeting (dynamicPressure_kPa > 50)
@@ -108,6 +154,7 @@ export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent }
           simFrame={simFrame}
           mission={mission}
           onSelectComponent={onSelectComponent}
+          onHoverComponent={onHoverComponent}
         />
         <ExhaustPlume simFrame={simFrame} stages={mission?.stages} />
       </group>

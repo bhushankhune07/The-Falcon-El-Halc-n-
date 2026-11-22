@@ -198,53 +198,56 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
 
   return (
     <group ref={groundGroupRef}>
+      {/* 360° Seamless Horizon Fog blending ground smoothly into the atmospheric sky dome */}
+      <fog attach="fog" args={['#081220', 850, 3200]} />
+
       {/* Mid-atmosphere Cloud Deck (3 km - 8 km) */}
       <CloudDeckStratum altitude_m={altitude_m} />
 
       {/* ======================================================== */}
       {/* 1. ELEVATED CONCRETE LAUNCH PEDESTAL & FLAME TRENCHES     */}
       {/* ======================================================== */}
-      {/* Main Elevated Pedestal Structure */}
-      <mesh position={[0, 1.8, 0]} receiveShadow castShadow>
-        <boxGeometry args={[42, 3.6, 42]} />
-        <meshStandardMaterial color="#64748b" roughness={0.8} metalness={0.2} />
-      </mesh>
-
-      {/* Concrete Launch Deck Surface with markings */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 3.62, 0]} receiveShadow>
+      {/* Concrete Pad Ground Apron (Clean Y-offset: y = 0.05) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} receiveShadow>
         <planeGeometry args={[160, 160]} />
         <meshStandardMaterial map={padTexture} roughness={0.75} metalness={0.2} />
       </mesh>
 
-      {/* Circular Steel Launch Mount Ring & Hold-down Pedestals */}
-      <mesh position={[0, 3.75, 0]}>
+      {/* Main Elevated Pedestal Structure */}
+      <mesh position={[0, 1.85, 0]} receiveShadow castShadow>
+        <boxGeometry args={[42, 3.6, 42]} />
+        <meshStandardMaterial color="#64748b" roughness={0.8} metalness={0.2} />
+      </mesh>
+
+      {/* Circular Steel Launch Mount Ring & Hold-down Pedestals (y = 3.85) */}
+      <mesh position={[0, 3.8, 0]}>
         <cylinderGeometry args={[4.2, 4.5, 0.4, 32]} />
         <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} />
       </mesh>
       {/* 4 Corner Hold-down Clamps */}
       {[-3.2, 3.2].map((cx) =>
         [-3.2, 3.2].map((cz) => (
-          <mesh key={`${cx}-${cz}`} position={[cx, 4.1, cz]} castShadow>
+          <mesh key={`${cx}-${cz}`} position={[cx, 4.15, cz]} castShadow>
             <boxGeometry args={[1.0, 1.0, 1.0]} />
             <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.25} />
           </mesh>
         ))
       )}
 
-      {/* Twin East-West Concrete Flame Deflector Trenches */}
-      <mesh position={[-28, 0.5, 0]} receiveShadow>
-        <boxGeometry args={[22, 4.0, 18]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.95} />
+      {/* Twin East-West Concrete Flame Deflector Trenches (scorched inner walls) */}
+      <mesh position={[-28, -0.6, 0]} receiveShadow>
+        <boxGeometry args={[24, 3.2, 18]} />
+        <meshStandardMaterial color="#0b0f19" roughness={0.95} />
       </mesh>
-      <mesh position={[28, 0.5, 0]} receiveShadow>
-        <boxGeometry args={[22, 4.0, 18]} />
-        <meshStandardMaterial color="#0f172a" roughness={0.95} />
+      <mesh position={[28, -0.6, 0]} receiveShadow>
+        <boxGeometry args={[24, 3.2, 18]} />
+        <meshStandardMaterial color="#0b0f19" roughness={0.95} />
       </mesh>
 
       {/* Scorched Central Flame Deflector Wedge (Inverted V-shape deflector) */}
-      <mesh position={[0, 0.8, 0]} rotation={[0, 0, Math.PI / 4]}>
+      <mesh position={[0, 0.5, 0]} rotation={[0, 0, Math.PI / 4]}>
         <boxGeometry args={[5.5, 5.5, 14]} />
-        <meshStandardMaterial color="#090d16" roughness={0.9} />
+        <meshStandardMaterial color="#05070c" roughness={0.9} />
       </mesh>
 
       {/* ======================================================== */}
@@ -368,14 +371,21 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
       {/* ======================================================== */}
       {/* 8. SRIHARIKOTA ISLAND COASTLINE & BAY OF BENGAL OCEAN    */}
       {/* ======================================================== */}
-      {/* Sandy Beach / Coastal Terrain */}
+      {/* Sandy Beach / Coastal Terrain at y = -0.3 with polygonOffset */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]} receiveShadow>
         <planeGeometry args={[3200, 3200]} />
-        <meshStandardMaterial color="#2d401e" roughness={0.9} metalness={0.05} />
+        <meshStandardMaterial
+          color="#2d401e"
+          roughness={0.9}
+          metalness={0.05}
+          polygonOffset
+          polygonOffsetFactor={1}
+          polygonOffsetUnits={1}
+        />
       </mesh>
 
-      {/* Bay of Bengal Ocean Surface (East of launch pad) with polygonOffset */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[800, -0.15, 0]} receiveShadow>
+      {/* Bay of Bengal Ocean Surface at y = -1.2 (clean vertical separation, zero z-fighting) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[800, -1.2, 0]} receiveShadow>
         <planeGeometry args={[2200, 3200]} />
         <meshStandardMaterial
           color="#0284c7"
@@ -383,9 +393,6 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
           metalness={0.5}
           transparent
           opacity={0.88}
-          polygonOffset
-          polygonOffsetFactor={-1}
-          polygonOffsetUnits={-1}
         />
       </mesh>
 

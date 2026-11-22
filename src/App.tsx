@@ -38,7 +38,7 @@ export default function App() {
   const [currentTime_s, setCurrentTime_s] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [timeWarp, setTimeWarp] = useState<number>(5);
-  const [cameraMode, setCameraMode] = useState<CameraMode>('chase');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('auto');
   const [isDeepSpaceActive, setIsDeepSpaceActive] = useState<boolean>(false);
   const autoPlayNextRef = useRef<boolean>(false);
 
@@ -122,7 +122,7 @@ export default function App() {
   const handleProceedToLaunch = () => {
     setCurrentTime_s(0);
     setIsPlaying(true);
-    setCameraMode('pad');
+    setCameraMode('auto');
     setIsDeepSpaceActive(false);
     setActiveScreen('launch');
   };
@@ -143,7 +143,7 @@ export default function App() {
       challengeModifiers.windScenario === 'nominal';
 
     setCurrentTime_s(0);
-    setCameraMode('pad');
+    setCameraMode('auto');
     setActiveScreen('launch');
 
     if (isAlreadyNominal) {
@@ -255,7 +255,7 @@ export default function App() {
               setSelectedMissionId(id);
               setCurrentTime_s(0);
               setIsPlaying(false);
-              setCameraMode('pad');
+              setCameraMode('auto');
               setIsDeepSpaceActive(false);
             }}
             modifiers={challengeModifiers}

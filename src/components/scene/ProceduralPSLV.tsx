@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
@@ -15,9 +15,104 @@ interface Props {
   mission?: MissionConfig;
   showInternalPayload?: boolean;
   onSelectComponent?: (comp: InspectableComponent) => void;
+  onHoverComponent?: (comp: InspectableComponent | null) => void;
 }
 
-export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) {
+interface BellNozzleProps {
+  throatRadius: number;
+  exitRadius: number;
+  height: number;
+  isFiring?: boolean;
+  glowColor?: string;
+  hasActuators?: boolean;
+}
+
+/**
+ * Procedural Parabolic Bell Nozzle using THREE.LatheGeometry
+ * Features converging-diverging parabolic contour, cooling manifold rings,
+ * incandescent throat glow, and visible gimbal actuator struts.
+ */
+function BellNozzle({
+  throatRadius,
+  exitRadius,
+  height,
+  isFiring = false,
+  glowColor = '#fed7aa',
+  hasActuators = true,
+}: BellNozzleProps) {
+  const latheGeometry = useMemo(() => {
+    const points: THREE.Vector2[] = [];
+    // Converging section (inlet down to throat)
+    points.push(new THREE.Vector2(throatRadius * 1.35, height * 0.12));
+    points.push(new THREE.Vector2(throatRadius * 1.15, height * 0.05));
+    points.push(new THREE.Vector2(throatRadius, 0)); // Throat
+    // Diverging parabolic contour
+    const steps = 10;
+    for (let i = 1; i <= steps; i++) {
+      const frac = i / steps;
+      const r = throatRadius + (exitRadius - throatRadius) * Math.pow(frac, 0.65);
+      const y = -frac * height;
+      points.push(new THREE.Vector2(r, y));
+    }
+    // Rim lip thickness
+    points.push(new THREE.Vector2(exitRadius * 1.03, -height));
+    return new THREE.LatheGeometry(points, 24);
+  }, [throatRadius, exitRadius, height]);
+
+  useEffect(() => {
+    return () => {
+      latheGeometry.dispose();
+    };
+  }, [latheGeometry]);
+
+  return (
+    <group>
+      {/* Parabolic Bell Body */}
+      <mesh geometry={latheGeometry}>
+        <meshStandardMaterial
+          color="#1e293b"
+          metalness={0.82}
+          roughness={0.32}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* External Regenerative Cooling Manifold Rings */}
+      <mesh position={[0, -height * 0.35, 0]}>
+        <torusGeometry args={[throatRadius + (exitRadius - throatRadius) * 0.48, 0.035, 8, 24]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -height * 0.7, 0]}>
+        <torusGeometry args={[throatRadius + (exitRadius - throatRadius) * 0.78, 0.04, 8, 24]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Incandescent Inner Throat Glow when Firing */}
+      {isFiring ? (
+        <mesh position={[0, -0.05, 0]}>
+          <torusGeometry args={[throatRadius * 0.85, 0.06, 8, 16]} />
+          <meshBasicMaterial color={glowColor} />
+        </mesh>
+      ) : null}
+
+      {/* Gimbal Actuator Struts */}
+      {hasActuators ? (
+        <>
+          <mesh position={[throatRadius * 1.1, height * 0.06, 0]} rotation={[0, 0, -0.25]}>
+            <cylinderGeometry args={[0.04, 0.04, height * 0.5, 8]} />
+            <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.25} />
+          </mesh>
+          <mesh position={[-throatRadius * 1.1, height * 0.06, 0]} rotation={[0, 0, 0.25]}>
+            <cylinderGeometry args={[0.04, 0.04, height * 0.5, 8]} />
+            <meshStandardMaterial color="#64748b" metalness={0.85} roughness={0.25} />
+          </mesh>
+        </>
+      ) : null}
+    </group>
+  );
+}
+
+export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverComponent }: Props) {
   const rootRef = useRef<THREE.Group>(null);
   const fairingLeftRef = useRef<THREE.Group>(null);
   const fairingRightRef = useRef<THREE.Group>(null);
@@ -25,12 +120,18 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
   const solarRightRef = useRef<THREE.Group>(null);
   const sarAntennaRef = useRef<THREE.Group>(null);
 
-  const handlePointerOver = (e: { stopPropagation: () => void }) => {
+  const handlePointerOver = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
     document.body.style.cursor = 'pointer';
+    if (onHoverComponent && INSPECTABLE_COMPONENTS[compId]) {
+      onHoverComponent(INSPECTABLE_COMPONENTS[compId]);
+    }
   };
   const handlePointerOut = () => {
     document.body.style.cursor = 'auto';
+    if (onHoverComponent) {
+      onHoverComponent(null);
+    }
   };
   const handleClick = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
@@ -149,13 +250,29 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             simFrame.ps1Detached ? dtPS1 * 0.04 : 0,
           ]}
           onClick={(e) => handleClick(e, 'ps1_core')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'ps1_core')}
           onPointerOut={handlePointerOut}
         >
           {/* Main White Body Cylinder */}
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[coreRadius, coreRadius, ps1Height, 32]} />
             <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} />
+          </mesh>
+
+          {/* External Cable Raceway Conduit */}
+          <mesh position={[0, 0, coreRadius + 0.035]}>
+            <boxGeometry args={[0.12, ps1Height - 1.2, 0.07]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.4} />
+          </mesh>
+
+          {/* Vernier Roll-Control Thruster Pods */}
+          <mesh position={[coreRadius + 0.06, -ps1Height / 2 + 2.5, 0]}>
+            <boxGeometry args={[0.18, 0.8, 0.3]} />
+            <meshStandardMaterial color="#ea580c" metalness={0.5} roughness={0.3} />
+          </mesh>
+          <mesh position={[-(coreRadius + 0.06), -ps1Height / 2 + 2.5, 0]}>
+            <boxGeometry args={[0.18, 0.8, 0.3]} />
+            <meshStandardMaterial color="#ea580c" metalness={0.5} roughness={0.3} />
           </mesh>
 
           {/* ISRO Tricolour Decal Ring */}
@@ -170,11 +287,16 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             <meshStandardMaterial color="#ea580c" roughness={0.4} metalness={0.2} />
           </mesh>
 
-          {/* PS1 Core Engine Nozzle Bell */}
-          <mesh position={[0, -ps1Height / 2 - 1.2, 0]}>
-            <coneGeometry args={[1.1, 2.4, 32, 1, true]} />
-            <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} side={THREE.DoubleSide} />
-          </mesh>
+          {/* PS1 Core Engine Parabolic Bell Nozzle */}
+          <group position={[0, -ps1Height / 2 - 0.2, 0]}>
+            <BellNozzle
+              throatRadius={0.45}
+              exitRadius={1.15}
+              height={2.2}
+              isFiring={!simFrame.ps1Detached && simFrame.thrust_N > 1000}
+              glowColor="#fed7aa"
+            />
+          </group>
         </group>
       ) : null}
 
@@ -209,7 +331,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             position={[posX, posY, posZ]}
             rotation={[rotPitch * dirZ, -cfg.angle, rotPitch * dirX]}
             onClick={(e) => handleClick(e, 'strap_ons')}
-            onPointerOver={handlePointerOver}
+            onPointerOver={(e) => handlePointerOver(e, 'strap_ons')}
             onPointerOut={handlePointerOut}
           >
             {/* Cylindrical Booster Body */}
@@ -228,31 +350,58 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
               <meshStandardMaterial color="#ea580c" roughness={0.4} metalness={0.2} />
             </mesh>
 
-            {/* Canted Nozzle */}
-            <mesh position={[0, -straponHeight / 2 - 0.7, 0]} rotation={[0.15 * dirX, 0, 0.15 * dirZ]}>
-              <coneGeometry args={[0.42, 1.4, 20, 1, true]} />
-              <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.3} side={THREE.DoubleSide} />
+            {/* Secondary Injection Thrust Vector Control (SITVC) Tank */}
+            <mesh position={[0.52, 0, 0]}>
+              <cylinderGeometry args={[0.11, 0.11, 3.2, 12]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.7} roughness={0.3} />
             </mesh>
 
-            {/* Structural Attachment Struts */}
+            {/* Canted Parabolic Bell Nozzle */}
+            <group
+              position={[0, -straponHeight / 2 - 0.1, 0]}
+              rotation={[0.15 * dirX, 0, 0.15 * dirZ]}
+            >
+              <BellNozzle
+                throatRadius={0.18}
+                exitRadius={0.46}
+                height={1.3}
+                isFiring={!isDetached && simFrame.thrust_N > 1000}
+                glowColor="#fed7aa"
+                hasActuators={false}
+              />
+            </group>
+
+            {/* Upper and Lower Attachment Struts to PS1 */}
             {!isDetached ? (
-              <mesh position={[-dirX * 0.35, 2.0, -dirZ * 0.35]}>
-                <boxGeometry args={[0.3, 0.2, 0.3]} />
-                <meshStandardMaterial color="#475569" metalness={0.6} />
-              </mesh>
+              <>
+                <mesh position={[-dirX * 0.35, 3.5, -dirZ * 0.35]}>
+                  <boxGeometry args={[0.3, 0.18, 0.3]} />
+                  <meshStandardMaterial color="#475569" metalness={0.75} />
+                </mesh>
+                <mesh position={[-dirX * 0.35, -3.5, -dirZ * 0.35]}>
+                  <boxGeometry args={[0.3, 0.18, 0.3]} />
+                  <meshStandardMaterial color="#475569" metalness={0.75} />
+                </mesh>
+              </>
             ) : null}
           </group>
         );
       })}
 
       {/* ======================================================== */}
-      {/* INTERSTAGE 1/2 TRUSS */}
+      {/* INTERSTAGE 1/2 TRUSS & VENT BANDS */}
       {/* ======================================================== */}
       {!simFrame.ps1Detached ? (
-        <mesh position={[0, ps1Height + 0.6, 0]}>
-          <cylinderGeometry args={[coreRadius - 0.05, coreRadius, 1.2, 24, 2, true]} />
-          <meshStandardMaterial color="#334155" wireframe metalness={0.7} roughness={0.4} />
-        </mesh>
+        <group position={[0, ps1Height + 0.6, 0]}>
+          <mesh>
+            <cylinderGeometry args={[coreRadius - 0.05, coreRadius, 1.2, 24, 2, true]} />
+            <meshStandardMaterial color="#334155" wireframe metalness={0.7} roughness={0.4} />
+          </mesh>
+          <mesh>
+            <cylinderGeometry args={[coreRadius - 0.06, coreRadius - 0.01, 1.15, 24]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.8} roughness={0.4} />
+          </mesh>
+        </group>
       ) : null}
 
       {/* ======================================================== */}
@@ -269,7 +418,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ]}
           rotation={[simFrame.ps2Detached ? dtPS2 * 0.05 : 0, 0, 0]}
           onClick={(e) => handleClick(e, 'ps2_vikas')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'ps2_vikas')}
           onPointerOut={handlePointerOut}
         >
           {/* Liquid Propellant Tank (UH25 + N2O4) */}
@@ -278,11 +427,22 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             <meshStandardMaterial color="#b45309" roughness={0.45} metalness={0.5} />
           </mesh>
 
-          {/* Vikas Gimbal Engine Nozzle */}
-          <mesh position={[0, -ps2Height / 2 - 1.1, 0]}>
-            <coneGeometry args={[0.95, 2.2, 32, 1, true]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.25} side={THREE.DoubleSide} />
+          {/* External Cable Raceway Conduit */}
+          <mesh position={[0, 0, coreRadius + 0.035]}>
+            <boxGeometry args={[0.12, ps2Height - 1.0, 0.07]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.6} roughness={0.4} />
           </mesh>
+
+          {/* Vikas Gimbal Parabolic Engine Bell Nozzle */}
+          <group position={[0, -ps2Height / 2 - 0.2, 0]}>
+            <BellNozzle
+              throatRadius={0.38}
+              exitRadius={1.02}
+              height={2.2}
+              isFiring={!simFrame.ps2Detached && simFrame.activeStages.includes('ps2')}
+              glowColor="#e0f2fe"
+            />
+          </group>
         </group>
       ) : null}
 
@@ -299,7 +459,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             0,
           ]}
           onClick={(e) => handleClick(e, 'ps3_hps3')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'ps3_hps3')}
           onPointerOut={handlePointerOut}
         >
           {/* Carbon/Kevlar Filament Wound Case */}
@@ -307,11 +467,17 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
             <cylinderGeometry args={[1.0, 1.0, ps3Height, 28]} />
             <meshStandardMaterial color="#1f2937" roughness={0.7} metalness={0.2} />
           </mesh>
-          {/* Submerged Flex Nozzle */}
-          <mesh position={[0, -ps3Height / 2 - 0.6, 0]}>
-            <coneGeometry args={[0.65, 1.2, 28, 1, true]} />
-            <meshStandardMaterial color="#475569" metalness={0.8} side={THREE.DoubleSide} />
-          </mesh>
+
+          {/* Submerged Parabolic Flex Nozzle */}
+          <group position={[0, -ps3Height / 2 - 0.1, 0]}>
+            <BellNozzle
+              throatRadius={0.25}
+              exitRadius={0.68}
+              height={1.2}
+              isFiring={!simFrame.ps3Detached && simFrame.activeStages.includes('ps3')}
+              glowColor="#fed7aa"
+            />
+          </group>
         </group>
       ) : null}
 
@@ -321,7 +487,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
       <group
         position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}
         onClick={(e) => handleClick(e, 'ps4_twin')}
-        onPointerOver={handlePointerOver}
+        onPointerOver={(e) => handlePointerOver(e, 'ps4_twin')}
         onPointerOut={handlePointerOut}
       >
         {/* Upper Stage Equipment Bay & Tanks */}
@@ -340,15 +506,25 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
         </mesh>
 
-        {/* Twin Gimbal Engines */}
-        <mesh position={[0.35, -ps4Height / 2 - 0.45, 0]}>
-          <coneGeometry args={[0.25, 0.9, 16, 1, true]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} side={THREE.DoubleSide} />
-        </mesh>
-        <mesh position={[-0.35, -ps4Height / 2 - 0.45, 0]}>
-          <coneGeometry args={[0.25, 0.9, 16, 1, true]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} side={THREE.DoubleSide} />
-        </mesh>
+        {/* Twin Gimbal Parabolic Engines */}
+        <group position={[0.35, -ps4Height / 2 - 0.1, 0]}>
+          <BellNozzle
+            throatRadius={0.09}
+            exitRadius={0.26}
+            height={0.85}
+            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4')}
+            glowColor="#e0f2fe"
+          />
+        </group>
+        <group position={[-0.35, -ps4Height / 2 - 0.1, 0]}>
+          <BellNozzle
+            throatRadius={0.09}
+            exitRadius={0.26}
+            height={0.85}
+            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4')}
+            glowColor="#e0f2fe"
+          />
+        </group>
       </group>
 
       {/* ======================================================== */}
@@ -360,7 +536,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           castShadow
           receiveShadow
           onClick={(e) => handleClick(e, 'eos04_bus')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'eos04_bus')}
           onPointerOut={handlePointerOut}
         >
           <boxGeometry args={[1.6, 2.2, 1.6]} />
@@ -372,7 +548,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ref={solarLeftRef}
           position={[-0.8, 0.2, 0]}
           onClick={(e) => handleClick(e, 'eos04_solar')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'eos04_solar')}
           onPointerOut={handlePointerOut}
         >
           <mesh position={[-1.8, 0, 0]}>
@@ -386,7 +562,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ref={solarRightRef}
           position={[0.8, 0.2, 0]}
           onClick={(e) => handleClick(e, 'eos04_solar')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'eos04_solar')}
           onPointerOut={handlePointerOut}
         >
           <mesh position={[1.8, 0, 0]}>
@@ -400,7 +576,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ref={sarAntennaRef}
           position={[0, -0.6, 0.85]}
           onClick={(e) => handleClick(e, 'eos04_sar')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'eos04_sar')}
           onPointerOut={handlePointerOut}
         >
           <mesh castShadow>
@@ -448,7 +624,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ref={fairingLeftRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
           onClick={(e) => handleClick(e, 'payload_fairing')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'payload_fairing')}
           onPointerOut={handlePointerOut}
         >
           {/* Outer Shell Cylinder Half */}
@@ -489,7 +665,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent }: Props) 
           ref={fairingRightRef}
           position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
           onClick={(e) => handleClick(e, 'payload_fairing')}
-          onPointerOver={handlePointerOver}
+          onPointerOver={(e) => handlePointerOver(e, 'payload_fairing')}
           onPointerOut={handlePointerOut}
         >
           {/* Outer Shell Cylinder Half */}

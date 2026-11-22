@@ -24,13 +24,13 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
 
-  // 1. Realistic Bathymetry Ocean Base (abyssal blue #020914 to shelf cyan/blue #104a7a)
+  // 1. Realistic Bathymetry Ocean Base (rich NASA Blue Marble ocean blues #1258a8 to #1d74c9)
   const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
-  oceanGrad.addColorStop(0, '#020914');    // Arctic abyssal deep
-  oceanGrad.addColorStop(0.18, '#051833'); // Sub-polar deep ocean
-  oceanGrad.addColorStop(0.5, '#09254c');  // Tropical deep ocean
-  oceanGrad.addColorStop(0.82, '#051833'); // Southern ocean
-  oceanGrad.addColorStop(1, '#020914');    // Antarctic abyssal deep
+  oceanGrad.addColorStop(0, '#0a3266');    // Arctic sub-polar deep
+  oceanGrad.addColorStop(0.18, '#104685'); // Sub-polar ocean
+  oceanGrad.addColorStop(0.5, '#1258a8');  // Tropical deep ocean
+  oceanGrad.addColorStop(0.82, '#104685'); // Southern ocean
+  oceanGrad.addColorStop(1, '#0a3266');    // Antarctic deep
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, width, height);
 
@@ -40,8 +40,8 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   const toX = (lon: number) => ((lon + 180) / 360) * width;
   const toY = (lat: number) => ((90 - lat) / 180) * height;
 
-  // 2. Continental Shelf Shallow Marine Shading (Cyan-Blue #104a7a)
-  ctx.fillStyle = '#0f416b';
+  // 2. Continental Shelf Shallow Marine Shading (Cyan-Blue #1d74c9)
+  ctx.fillStyle = '#1d74c9';
   // Indian Ocean & Bay of Bengal shelf
   ctx.beginPath();
   ctx.ellipse(toX(82), toY(15), toX(12) - toX(0), toY(0) - toY(15), 0, 0, Math.PI * 2);
@@ -55,7 +55,7 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   ctx.fill();
 
   // 3. Global Landmasses (Sharp, Recognizable Continental Outlines)
-  ctx.fillStyle = '#223824'; // Base continental land vegetation tone
+  ctx.fillStyle = '#2d5e34'; // Vibrant continental land vegetation tone
 
   // A. AFRICA
   ctx.beginPath();

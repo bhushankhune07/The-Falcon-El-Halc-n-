@@ -37,6 +37,8 @@ export function ScaledEarth({ radius = 60 }: Props) {
           map={earthTexture}
           roughness={0.55}
           metalness={0.15}
+          emissive="#0a2444"
+          emissiveIntensity={0.25}
         />
       </mesh>
 

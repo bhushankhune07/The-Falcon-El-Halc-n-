@@ -12,8 +12,10 @@ interface Props {
 export function ExhaustPlume({ simFrame, stages }: Props) {
   const solidPlumeRef = useRef<THREE.Group>(null);
   const liquidPlumeRef = useRef<THREE.Group>(null);
+  const retroPuffsRef = useRef<THREE.Group>(null);
   const padSmokeRef = useRef<THREE.Group>(null);
   const liftoffLightRef = useRef<THREE.PointLight>(null);
+  const shockDiamondsRef = useRef<THREE.Group>(null);
 
   const t = simFrame.time_s;
   const isThrusting = simFrame.thrust_N > 1000;
@@ -31,14 +33,21 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const ps4Ign = ps4?.ignitionTime_s ?? 580.0;
   const ps4BurnEnd = ps4 ? ps4.ignitionTime_s + ps4.burnDuration_s : 1029.0;
 
+  // Staging separation flame gap: 1.5s cutoff window around PS1 -> PS2 and PS2 -> PS3
+  // Main flame cuts off completely while the spent stage drops away
+  const isPS1toPS2Gap = t >= (ps1BurnEnd - 0.2) && t < (ps2Ign + 0.3);
+  const isPS2toPS3Gap = t >= (ps2BurnEnd - 0.2) && t < (ps3Ign + 0.3);
+  const isStagingFlameCutoff = isPS1toPS2Gap || isPS2toPS3Gap;
+
   // Determine active propulsion type from mission stages
   // Solid stages: PS1 / strap-ons (t < ps1BurnEnd) or PS3 (t >= ps3Ign && t < ps3BurnEnd)
-  const isSolidActive = (t < ps1BurnEnd) || (t >= ps3Ign && t < ps3BurnEnd);
+  const isSolidActive = !isStagingFlameCutoff && ((t < ps1BurnEnd - 0.2) || (t >= ps3Ign + 0.3 && t < ps3BurnEnd));
 
   // Liquid stages: PS2 Vikas or PS4 twin (gated on !simFrame.ps4Cutoff)
-  const isLiquidActive =
-    (t >= ps2Ign && t < ps2BurnEnd) ||
-    (t >= ps4Ign && t < ps4BurnEnd && !simFrame.ps4Cutoff);
+  const isLiquidActive = !isStagingFlameCutoff && (
+    (t >= ps2Ign + 0.3 && t < ps2BurnEnd - 0.2) ||
+    (t >= ps4Ign && t < ps4BurnEnd && !simFrame.ps4Cutoff)
+  );
 
   // Active stage nozzle positions relative to rocket group
   const solidY = (t >= ps3Ign && t < ps3BurnEnd) ? 33.0 : -1.2;
@@ -63,9 +72,9 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       const targetScaleY = isSolidActive && isThrusting ? throttle * flicker * 12.0 : 0.001;
       const targetScaleXZ = isSolidActive && isThrusting ? flicker * vacExpansion : 0.001;
 
-      solidPlumeRef.current.scale.y = THREE.MathUtils.damp(solidPlumeRef.current.scale.y, targetScaleY, 15, delta);
-      solidPlumeRef.current.scale.x = THREE.MathUtils.damp(solidPlumeRef.current.scale.x, targetScaleXZ, 15, delta);
-      solidPlumeRef.current.scale.z = THREE.MathUtils.damp(solidPlumeRef.current.scale.z, targetScaleXZ, 15, delta);
+      solidPlumeRef.current.scale.y = THREE.MathUtils.damp(solidPlumeRef.current.scale.y, targetScaleY, 18, delta);
+      solidPlumeRef.current.scale.x = THREE.MathUtils.damp(solidPlumeRef.current.scale.x, targetScaleXZ, 18, delta);
+      solidPlumeRef.current.scale.z = THREE.MathUtils.damp(solidPlumeRef.current.scale.z, targetScaleXZ, 18, delta);
     }
 
     if (liquidPlumeRef.current) {
@@ -73,9 +82,25 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       const targetScaleY = isLiquidActive && isThrusting ? (0.6 + throttle * 0.8) * flicker * 9.0 : 0.001;
       const targetScaleXZ = isLiquidActive && isThrusting ? flicker * liquidVacRadial * 1.2 : 0.001;
 
-      liquidPlumeRef.current.scale.y = THREE.MathUtils.damp(liquidPlumeRef.current.scale.y, targetScaleY, 15, delta);
-      liquidPlumeRef.current.scale.x = THREE.MathUtils.damp(liquidPlumeRef.current.scale.x, targetScaleXZ, 15, delta);
-      liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(liquidPlumeRef.current.scale.z, targetScaleXZ, 15, delta);
+      liquidPlumeRef.current.scale.y = THREE.MathUtils.damp(liquidPlumeRef.current.scale.y, targetScaleY, 18, delta);
+      liquidPlumeRef.current.scale.x = THREE.MathUtils.damp(liquidPlumeRef.current.scale.x, targetScaleXZ, 18, delta);
+      liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(liquidPlumeRef.current.scale.z, targetScaleXZ, 18, delta);
+    }
+
+    // Animate Mach shock diamonds along the exhaust axis
+    if (shockDiamondsRef.current && isLiquidActive) {
+      const diamondPulse = 0.85 + Math.sin(t * 55.0) * 0.15;
+      shockDiamondsRef.current.scale.set(diamondPulse, diamondPulse, diamondPulse);
+    }
+
+    // Staging retro-rocket puffs during separation gap
+    if (retroPuffsRef.current) {
+      retroPuffsRef.current.visible = isStagingFlameCutoff;
+      if (isStagingFlameCutoff) {
+        const puffScale = 0.8 + Math.sin(t * 30.0) * 0.2;
+        retroPuffsRef.current.scale.set(puffScale, puffScale, puffScale);
+        retroPuffsRef.current.position.y = isPS1toPS2Gap ? 19.5 : 32.5;
+      }
     }
 
     // Pad liftoff dynamic lighting (T+0.1s to T+10s)
@@ -148,6 +173,18 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
           />
         </mesh>
 
+        {/* Soft Solid Nozzle Lip Glow */}
+        <mesh position={[0, -0.1, 0]}>
+          <ringGeometry args={[0.3, 1.2, 16]} />
+          <meshBasicMaterial
+            color="#ffedd5"
+            transparent
+            opacity={0.7}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+
         {/* Dynamic Point Light from solid flame */}
         <pointLight color="#ff7700" intensity={4.5} distance={60} decay={2} />
       </group>
@@ -190,6 +227,34 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
           />
         </mesh>
 
+        {/* Pulsing Mach Shock Diamonds (Electric Cyan/White) */}
+        <group ref={shockDiamondsRef}>
+          {[1.2, 2.2, 3.2, 4.2].map((dy, idx) => (
+            <mesh key={dy} position={[0, -dy, 0]}>
+              <octahedronGeometry args={[0.26 - idx * 0.04, 0]} />
+              <meshBasicMaterial
+                color="#e0f2fe"
+                transparent
+                opacity={0.88 - idx * 0.15}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Soft Dynamic Nozzle Lip Glow */}
+        <mesh position={[0, -0.1, 0]}>
+          <ringGeometry args={[0.2, 0.9, 16]} />
+          <meshBasicMaterial
+            color="#38bdf8"
+            transparent
+            opacity={0.65}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+
         {/* High-Altitude Vacuum Expansion Jellyfish Envelope (>35 km) */}
         {simFrame.altitude_m > 35000 && isLiquidActive ? (
           <mesh position={[0, -4.5, 0]}>
@@ -205,6 +270,39 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
         ) : null}
 
         <pointLight color="#60a5fa" intensity={3.5} distance={45} decay={2} />
+      </group>
+
+      {/* ======================================================== */}
+      {/* STAGING RETRO-MOTOR SEPARATION PUFFS                     */}
+      {/* White-grey exhaust puffs as stage drops away cleanly      */}
+      {/* ======================================================== */}
+      <group ref={retroPuffsRef} visible={false}>
+        {[-1.2, 1.2].map((rx) =>
+          [-1.2, 1.2].map((rz) => (
+            <group key={`${rx}-${rz}`} position={[rx, 0, rz]}>
+              <mesh position={[0, 0.8, 0]}>
+                <coneGeometry args={[0.35, 1.4, 12, 1, true]} />
+                <meshBasicMaterial
+                  color="#f8fafc"
+                  transparent
+                  opacity={0.75}
+                  side={THREE.DoubleSide}
+                  blending={THREE.AdditiveBlending}
+                  depthWrite={false}
+                />
+              </mesh>
+              <mesh position={[0, 1.6, 0]}>
+                <sphereGeometry args={[0.5, 8, 8]} />
+                <meshBasicMaterial
+                  color="#cbd5e1"
+                  transparent
+                  opacity={0.5}
+                  depthWrite={false}
+                />
+              </mesh>
+            </group>
+          ))
+        )}
       </group>
 
       {/* Dynamic liftoff pad light */}
