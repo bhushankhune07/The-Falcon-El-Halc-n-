@@ -19,9 +19,10 @@ interface Props {
 
 export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent, onHoverComponent }: Props) {
   const rocketGroupRef = useRef<THREE.Group>(null);
-  const targetCamPosRef = useRef(new THREE.Vector3(-18, 22, 38));
+  const targetCamPosRef = useRef(new THREE.Vector3(-20, 22, 44));
   const autoCamPosRef = useRef(new THREE.Vector3(-48, 18, 72));
-  const autoLookAtRef = useRef(new THREE.Vector3(0, 32, 0));
+  const autoLookAtRef = useRef(new THREE.Vector3(0, 26, 0));
+  const currentLookAtRef = useRef(new THREE.Vector3(0, 26, 0));
 
   // Surface-relative downrange calculation (removes initial Earth-rotation drift boost)
   // v0_earth is computed dynamically from the active mission's launch site coordinates and azimuth
@@ -65,48 +66,66 @@ export function AscentScene({ simFrame, cameraMode, mission, onSelectComponent, 
     if (isAuto) {
       // Broadcast Auto-Cam: Starts at hero low-angle shot framing the rocket, red umbilical tower,
       // and Bay of Bengal shoreline (-48, groundY + 18, 72).
-      // Smoothly tracks upward as the rocket clears the tower, then seamlessly glides into
+      // Smoothly tracks upward as rocket clears the tower, then seamlessly glides into
       // a cinematic over-the-shoulder chase framing above 1.2 km (1200m).
       const cam = state.camera;
       const groundY = -simFrame.altitude_m;
 
-      if (simFrame.altitude_m < 1200) {
-        const climbRatio = Math.min(1.0, simFrame.altitude_m / 1200.0);
+      let targetCamX = -48;
+      let targetCamY = groundY + 18;
+      let targetCamZ = 72;
+      let targetLookY = 26;
+
+      if (simFrame.altitude_m < 1400) {
+        const climbRatio = Math.min(1.0, Math.max(0, simFrame.altitude_m / 1400.0));
         const smoothRatio = climbRatio * climbRatio * (3.0 - 2.0 * climbRatio);
-        
-        // Interpolate camera position from pad tracking to high-ascent chase
+
         const padX = -48;
         const padY = groundY + 18;
         const padZ = 72;
 
-        const chaseX = -18;
+        const chaseX = -20;
         const chaseY = 22;
-        const chaseZ = 38;
+        const chaseZ = 44;
 
-        autoCamPosRef.current.set(
-          THREE.MathUtils.lerp(padX, chaseX, smoothRatio),
-          THREE.MathUtils.lerp(padY, chaseY, smoothRatio),
-          THREE.MathUtils.lerp(padZ, chaseZ, smoothRatio)
-        );
-
-        // Smooth upward pan on rocket target
-        const lookY = THREE.MathUtils.lerp(32, 20, smoothRatio);
-        autoLookAtRef.current.set(0, lookY, 0);
-
-        cam.position.copy(autoCamPosRef.current);
-        cam.lookAt(autoLookAtRef.current);
+        targetCamX = THREE.MathUtils.lerp(padX, chaseX, smoothRatio);
+        targetCamY = THREE.MathUtils.lerp(padY, chaseY, smoothRatio);
+        targetCamZ = THREE.MathUtils.lerp(padZ, chaseZ, smoothRatio);
+        targetLookY = THREE.MathUtils.lerp(26, 16, smoothRatio);
       } else {
-        // High ascent: Steady over-the-shoulder chase view
-        targetCamPosRef.current.set(-18, 22, 38);
-        cam.position.lerp(targetCamPosRef.current, delta * 3.0);
-        cam.lookAt(0, 18, 0);
+        targetCamX = -20;
+        targetCamY = 22;
+        targetCamZ = 44;
+        targetLookY = 16;
       }
+
+      autoCamPosRef.current.set(targetCamX, targetCamY, targetCamZ);
+      autoLookAtRef.current.set(0, targetLookY, 0);
+
+      // Smooth damp interpolation on BOTH camera position and lookAt target (zero abrupt angle snaps)
+      cam.position.x = THREE.MathUtils.damp(cam.position.x, autoCamPosRef.current.x, 3.2, delta);
+      cam.position.y = THREE.MathUtils.damp(cam.position.y, autoCamPosRef.current.y, 3.2, delta);
+      cam.position.z = THREE.MathUtils.damp(cam.position.z, autoCamPosRef.current.z, 3.2, delta);
+
+      currentLookAtRef.current.x = THREE.MathUtils.damp(currentLookAtRef.current.x, autoLookAtRef.current.x, 3.2, delta);
+      currentLookAtRef.current.y = THREE.MathUtils.damp(currentLookAtRef.current.y, autoLookAtRef.current.y, 3.2, delta);
+      currentLookAtRef.current.z = THREE.MathUtils.damp(currentLookAtRef.current.z, autoLookAtRef.current.z, 3.2, delta);
+
+      cam.lookAt(currentLookAtRef.current);
     } else if (cameraMode === 'chase') {
-      // Rocket chase camera: dynamic over-the-shoulder tracking looking down the fuselage toward Sriharikota
+      // Rocket chase camera: steady over-the-shoulder tracking centering rocket and plume
       const cam = state.camera;
-      targetCamPosRef.current.set(-18, 22, 38);
-      cam.position.lerp(targetCamPosRef.current, delta * 3.0);
-      cam.lookAt(0, 18, 0);
+      targetCamPosRef.current.set(-20, 22, 44);
+      cam.position.x = THREE.MathUtils.damp(cam.position.x, targetCamPosRef.current.x, 3.2, delta);
+      cam.position.y = THREE.MathUtils.damp(cam.position.y, targetCamPosRef.current.y, 3.2, delta);
+      cam.position.z = THREE.MathUtils.damp(cam.position.z, targetCamPosRef.current.z, 3.2, delta);
+
+      autoLookAtRef.current.set(0, 16, 0);
+      currentLookAtRef.current.x = THREE.MathUtils.damp(currentLookAtRef.current.x, autoLookAtRef.current.x, 3.2, delta);
+      currentLookAtRef.current.y = THREE.MathUtils.damp(currentLookAtRef.current.y, autoLookAtRef.current.y, 3.2, delta);
+      currentLookAtRef.current.z = THREE.MathUtils.damp(currentLookAtRef.current.z, autoLookAtRef.current.z, 3.2, delta);
+
+      cam.lookAt(currentLookAtRef.current);
     }
 
     // Physically motivated camera micro-shake (liftoff acoustic vibration & Max-Q buffeting)

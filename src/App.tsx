@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from 'react';
-import { Rocket, ShieldCheck, Database, Compass, Orbit } from 'lucide-react';
+import { Rocket, ShieldCheck, Database, Compass, Orbit, Layers } from 'lucide-react';
 import {
   PRESET_MISSIONS,
   DEFAULT_MISSION_ID,
@@ -10,10 +10,11 @@ import {
 import { PreLaunchBrief } from './components/brief/PreLaunchBrief';
 import { LaunchView } from './components/launch/LaunchView';
 import { BhoonidhiExplorer } from './components/orbit/BhoonidhiExplorer';
+import { ModelBriefingView } from './components/briefing/ModelBriefingView';
 import { CameraMode, deriveSimFrameState } from './components/scene';
 import { ProvenanceModal } from './components/common/ProvenanceModal';
 
-export type ScreenId = 'brief' | 'launch' | 'orbit';
+export type ScreenId = 'brief' | 'launch' | 'orbit' | 'briefing';
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ScreenId>('brief');
@@ -37,7 +38,7 @@ export default function App() {
 
   const [currentTime_s, setCurrentTime_s] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [timeWarp, setTimeWarp] = useState<number>(5);
+  const [timeWarp, setTimeWarp] = useState<number>(1);
   const [cameraMode, setCameraMode] = useState<CameraMode>('auto');
   const [isDeepSpaceActive, setIsDeepSpaceActive] = useState<boolean>(false);
   const autoPlayNextRef = useRef<boolean>(false);
@@ -121,6 +122,7 @@ export default function App() {
   // Transition to Launchpad and start ascent playback
   const handleProceedToLaunch = () => {
     setCurrentTime_s(0);
+    setTimeWarp(1);
     setIsPlaying(true);
     setCameraMode('auto');
     setIsDeepSpaceActive(false);
@@ -143,6 +145,7 @@ export default function App() {
       challengeModifiers.windScenario === 'nominal';
 
     setCurrentTime_s(0);
+    setTimeWarp(1);
     setCameraMode('auto');
     setActiveScreen('launch');
 
@@ -173,9 +176,9 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                BharatLaunch 3D
+                Urdhva
                 <span className="text-[10px] font-mono font-normal text-slate-400 hidden sm:inline">
-                  — T-0 to First Pixel
+                  — T-0 to First Pixel — Interactive ISRO Mission Lab
                 </span>
               </h1>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
@@ -185,7 +188,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3-Step Screen Switcher */}
+        {/* 4-Step Screen Switcher */}
         <nav className="flex items-center bg-slate-900 border border-slate-800 p-0.5 rounded-lg text-xs font-mono">
           <button
             onClick={() => setActiveScreen('brief')}
@@ -225,6 +228,19 @@ export default function App() {
             <span className="hidden md:inline">3. Orbit &amp; Bhoonidhi Data</span>
             <span className="md:hidden">3. Orbit</span>
           </button>
+
+          <button
+            onClick={() => setActiveScreen('briefing')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded transition-all ${
+              activeScreen === 'briefing'
+                ? 'bg-cyan-500 text-white font-bold shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">4. 3D Model Briefing</span>
+            <span className="md:hidden">4. Models</span>
+          </button>
         </nav>
 
         {/* Active Mission & Provenance Button */}
@@ -254,6 +270,7 @@ export default function App() {
             onSelectMission={(id) => {
               setSelectedMissionId(id);
               setCurrentTime_s(0);
+              setTimeWarp(1);
               setIsPlaying(false);
               setCameraMode('auto');
               setIsDeepSpaceActive(false);
@@ -295,6 +312,10 @@ export default function App() {
             onResetGoldenRun={handleResetGoldenRun}
             onOpenDeepSpace={handleOpenDeepSpace}
           />
+        )}
+
+        {activeScreen === 'briefing' && (
+          <ModelBriefingView />
         )}
       </main>
 

@@ -86,7 +86,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
               OUR SCIENTIFIC COMMITMENT:
             </span>
             <p>
-              In adherence to hackathon evaluation guidelines and rigorous aerospace simulation standards, every metric, trajectory equation, and visual component in <strong>BharatLaunch 3D</strong> is explicitly tagged by provenance. We clearly demarcate published official data from calibrated model derivations and synthetic outputs.
+              In adherence to hackathon evaluation guidelines and rigorous aerospace simulation standards, every metric, trajectory equation, and visual component in <strong>Urdhva</strong> is explicitly tagged by provenance. We clearly demarcate published official data from calibrated model derivations and synthetic outputs.
             </p>
           </div>
 
@@ -262,7 +262,7 @@ export function ProvenanceModal({ isOpen, onClose }: Props) {
         {/* ======================================================== */}
         <div className="flex-none px-6 py-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between">
           <span className="text-[11px] font-mono text-slate-400">
-            BharatLaunch 3D &bull; ASTRA 2026 Hackathon
+            Urdhva &bull; ASTRA 2026 Hackathon
           </span>
           <button
             onClick={onClose}

@@ -80,13 +80,36 @@ export function MissionCanvas({
   cameraMode = 'auto',
   onCameraModeChange,
   deepSpaceActive = false,
-  deepSpacePhase = 0.5,
+  deepSpacePhase = 0,
   blueprintMode = false,
   onToggleBlueprint,
   onSelectComponent,
 }: Props) {
   const [showOrbitBadge, setShowOrbitBadge] = useState(false);
   const [hoveredComponent, setHoveredComponent] = useState<InspectableComponent | null>(null);
+
+  // Independent real-time commissioning timer (0 -> 10s) once ps4Cutoff is true
+  const [commissioningTime, setCommissioningTime] = useState<number>(0);
+
+  useEffect(() => {
+    if (!simFrame.ps4Cutoff) {
+      setCommissioningTime(0);
+      return;
+    }
+    let last = performance.now();
+    let animId: number;
+    const tick = (now: number) => {
+      const delta = (now - last) / 1000.0;
+      last = now;
+      setCommissioningTime((prev) => {
+        const next = prev + delta;
+        return next >= 10.0 ? 10.0 : next;
+      });
+      animId = requestAnimationFrame(tick);
+    };
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [simFrame.ps4Cutoff, mission?.id]);
 
   // Cross-fade threshold around 120 km
   const altKm = simFrame.altitude_m / 1000.0;
@@ -111,11 +134,6 @@ export function MissionCanvas({
       setShowOrbitBadge(false);
     }
   }, [altKm, deepSpaceActive]);
-
-  // Post-Cutoff elapsed time for commissioning sequence
-  const ps4Stage = mission?.stages?.find((s) => s.type === 'ps4');
-  const cutoffTime = ps4Stage ? ps4Stage.ignitionTime_s + ps4Stage.burnDuration_s : 1029.0;
-  const dtCutoff = simFrame.ps4Cutoff ? Math.max(0, simFrame.time_s - cutoffTime) : 0;
 
   // Dynamic cross-fade opacities
   let ascentOpacity = 1.0;
@@ -158,7 +176,7 @@ export function MissionCanvas({
                 ? [0, 75, 140]
                 : [-55, 48, 95]
               : [-18, 16, 36],
-            fov: 45,
+            fov: 48,
             near: 0.1,
             far: 400000,
           }}
@@ -207,6 +225,7 @@ export function MissionCanvas({
                 targetOrbit={mission?.targetOrbit}
                 deepSpaceActive={deepSpaceActive}
                 deepSpacePhase={deepSpacePhase}
+                commissioningTime={commissioningTime}
                 blueprintMode={blueprintMode}
                 onSelectComponent={onSelectComponent}
                 onHoverComponent={setHoveredComponent}
@@ -249,34 +268,35 @@ export function MissionCanvas({
 
       {/* ======================================================== */}
       {/* ORBITAL COMMISSIONING SEQUENCE INDICATOR PILLS           */}
+      {/* Anchored at bottom-24 right-4 for zero HUD collision     */}
       {/* ======================================================== */}
       {isOrbitVisible && !deepSpaceActive && simFrame.ps4Cutoff ? (
-        <div className="absolute top-16 right-4 z-20 flex flex-col gap-1.5 text-[10px] font-mono pointer-events-none">
+        <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-1.5 text-[10px] font-mono pointer-events-none">
           <div className="px-2.5 py-1 rounded bg-slate-950/85 backdrop-blur border border-emerald-500/50 text-emerald-300 flex items-center gap-1.5 shadow-lg">
             <span className="text-emerald-400 font-bold">✓</span>
             <span>1. PS4 STAGE SEPARATION</span>
           </div>
           <div
             className={`px-2.5 py-1 rounded backdrop-blur border flex items-center gap-1.5 shadow-lg transition-colors ${
-              dtCutoff >= 3.0
+              commissioningTime >= 3.0
                 ? 'bg-slate-950/85 border-emerald-500/50 text-emerald-300'
                 : 'bg-slate-950/60 border-slate-800 text-slate-500'
             }`}
           >
-            <span className={dtCutoff >= 3.0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-              {dtCutoff >= 3.0 ? '✓' : '○'}
+            <span className={commissioningTime >= 3.0 ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+              {commissioningTime >= 3.0 ? '✓' : '○'}
             </span>
             <span>2. SOLAR ARRAYS DEPLOYED</span>
           </div>
           <div
             className={`px-2.5 py-1 rounded backdrop-blur border flex items-center gap-1.5 shadow-lg transition-colors ${
-              dtCutoff >= 6.5
+              commissioningTime >= 6.0
                 ? 'bg-slate-950/85 border-cyan-500/50 text-cyan-300 animate-pulse'
                 : 'bg-slate-950/60 border-slate-800 text-slate-500'
             }`}
           >
-            <span className={dtCutoff >= 6.5 ? 'text-cyan-400 font-bold' : 'text-slate-500'}>
-              {dtCutoff >= 6.5 ? '✓' : '○'}
+            <span className={commissioningTime >= 6.0 ? 'text-cyan-400 font-bold' : 'text-slate-500'}>
+              {commissioningTime >= 6.0 ? '✓' : '○'}
             </span>
             <span>3. C-SAR RADAR ACTIVE</span>
           </div>

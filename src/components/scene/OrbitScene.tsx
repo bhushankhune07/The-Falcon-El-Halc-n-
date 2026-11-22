@@ -20,6 +20,7 @@ interface Props {
   };
   deepSpaceActive?: boolean;
   deepSpacePhase?: number; // 0..1
+  commissioningTime?: number;
   blueprintMode?: boolean;
   onSelectComponent?: (comp: InspectableComponent) => void;
   onHoverComponent?: (comp: InspectableComponent | null) => void;
@@ -89,7 +90,8 @@ export function OrbitScene({
   mission,
   targetOrbit,
   deepSpaceActive = false,
-  deepSpacePhase = 0.5,
+  deepSpacePhase = 0,
+  commissioningTime = 0,
   blueprintMode = false,
   onSelectComponent,
   onHoverComponent,
@@ -117,10 +119,8 @@ export function OrbitScene({
 
   const orbitRadius = earthRadius + (Math.max(120000, simFrame.altitude_m) / 6378137.0) * earthRadius;
 
-  // Post-Cutoff Commissioning Elapsed Time
-  const ps4Stage = mission?.stages?.find((s) => s.type === 'ps4');
-  const cutoffTime = ps4Stage ? ps4Stage.ignitionTime_s + ps4Stage.burnDuration_s : 1029.0;
-  const dtCutoff = simFrame.ps4Cutoff ? Math.max(0, simFrame.time_s - cutoffTime) : 0;
+  // Post-Cutoff Commissioning Elapsed Time (Independent real-time elapsed timer 0..10s)
+  const dtCutoff = simFrame.ps4Cutoff ? (commissioningTime ?? 0) : 0;
 
   const handlePointerOver = (e: { stopPropagation: () => void }, compId: string) => {
     e.stopPropagation();
@@ -221,13 +221,13 @@ export function OrbitScene({
     if (sarAntennaRef.current) {
       const targetRot = !simFrame.ps4Cutoff
         ? 0.0
-        : dtCutoff < 5.5
+        : dtCutoff < 4.8
         ? 0.0
-        : Math.min(Math.PI * 0.22, ((dtCutoff - 5.5) / 2.0) * (Math.PI * 0.22));
-      sarAntennaRef.current.rotation.x = THREE.MathUtils.damp(sarAntennaRef.current.rotation.x, targetRot, 2.5, delta);
+        : Math.min(Math.PI * 0.22, ((dtCutoff - 4.8) / 1.2) * (Math.PI * 0.22));
+      sarAntennaRef.current.rotation.x = THREE.MathUtils.damp(sarAntennaRef.current.rotation.x, targetRot, 3.0, delta);
     }
 
-    const isRadarActive = simFrame.ps4Cutoff && dtCutoff >= 6.5;
+    const isRadarActive = simFrame.ps4Cutoff && dtCutoff >= 6.0;
 
     if (radarConeRef.current) {
       radarConeRef.current.visible = isRadarActive;

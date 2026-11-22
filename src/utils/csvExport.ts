@@ -33,7 +33,7 @@ export function exportTelemetryCsv(trajectory: TrajectoryResult, missionName: st
   const link = document.createElement('a');
   link.href = url;
   const safeName = missionName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  link.download = `${safeName}_telemetry_${Date.now()}.csv`;
+  link.download = `urdhva_${safeName}_telemetry_${Date.now()}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

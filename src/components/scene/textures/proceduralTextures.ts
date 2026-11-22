@@ -119,14 +119,93 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   ctx.closePath();
   ctx.fill();
 
-  // D. AMERICAS & AUSTRALIA
+  // D. NORTH AMERICA (Accurate lat/lon polygon array)
+  ctx.fillStyle = '#2d5e34';
   ctx.beginPath();
-  // North America
-  ctx.ellipse(toX(-100), toY(45), toX(28) - toX(0), toY(0) - toY(18), -0.15, 0, Math.PI * 2);
-  // South America
-  ctx.ellipse(toX(-60), toY(-18), toX(18) - toX(0), toY(0) - toY(26), 0.2, 0, Math.PI * 2);
-  // Australia
-  ctx.ellipse(toX(134), toY(-25), toX(16) - toX(0), toY(0) - toY(12), 0, 0, Math.PI * 2);
+  ctx.moveTo(toX(-168), toY(65));  // Bering Strait / Alaska
+  ctx.lineTo(toX(-160), toY(56));  // Alaska Peninsula
+  ctx.lineTo(toX(-140), toY(59));  // Gulf of Alaska
+  ctx.lineTo(toX(-130), toY(54));  // British Columbia
+  ctx.lineTo(toX(-124), toY(47));  // Washington / Seattle
+  ctx.lineTo(toX(-122), toY(37));  // San Francisco
+  ctx.lineTo(toX(-117), toY(32));  // San Diego / Baja entrance
+  ctx.lineTo(toX(-110), toY(23));  // Cabo San Lucas
+  ctx.lineTo(toX(-105), toY(20));  // Jalisco / Colima
+  ctx.lineTo(toX(-96), toY(16));   // Tehuantepec
+  ctx.lineTo(toX(-89), toY(21));   // Yucatan Peninsula
+  ctx.lineTo(toX(-91), toY(18));   // Campeche
+  ctx.lineTo(toX(-97), toY(26));   // Texas / Gulf Coast
+  ctx.lineTo(toX(-89), toY(29));   // Mississippi Delta
+  ctx.lineTo(toX(-81), toY(25));   // Miami / Florida Keys
+  ctx.lineTo(toX(-80), toY(30));   // Florida East Coast
+  ctx.lineTo(toX(-75), toY(35));   // Cape Hatteras
+  ctx.lineTo(toX(-74), toY(40));   // New York / Chesapeake
+  ctx.lineTo(toX(-70), toY(43));   // Boston / Cape Cod
+  ctx.lineTo(toX(-64), toY(45));   // Nova Scotia
+  ctx.lineTo(toX(-55), toY(50));   // Newfoundland
+  ctx.lineTo(toX(-60), toY(57));   // Labrador
+  ctx.lineTo(toX(-75), toY(62));   // Hudson Bay south
+  ctx.lineTo(toX(-85), toY(64));   // Hudson Bay west
+  ctx.lineTo(toX(-95), toY(72));   // Canadian Arctic Archipelago
+  ctx.lineTo(toX(-130), toY(70));  // Beaufort Sea coast
+  ctx.lineTo(toX(-156), toY(71));  // Point Barrow
+  ctx.closePath();
+  ctx.fill();
+
+  // E. SOUTH AMERICA (Accurate lat/lon polygon array)
+  ctx.fillStyle = '#24522b';
+  ctx.beginPath();
+  ctx.moveTo(toX(-77), toY(8));    // Panama border / Colombia
+  ctx.lineTo(toX(-72), toY(12));   // Guajira Peninsula
+  ctx.lineTo(toX(-62), toY(10));   // Venezuela / Caracas
+  ctx.lineTo(toX(-51), toY(0));    // Amazon Delta / Macapa
+  ctx.lineTo(toX(-44), toY(-2.5)); // São Luís
+  ctx.lineTo(toX(-35), toY(-5));   // Ponta do Seixas / Recife
+  ctx.lineTo(toX(-38), toY(-13));  // Salvador / Bahia
+  ctx.lineTo(toX(-41), toY(-21));  // Rio de Janeiro
+  ctx.lineTo(toX(-46), toY(-24));  // Santos
+  ctx.lineTo(toX(-52), toY(-32));  // Rio Grande do Sul
+  ctx.lineTo(toX(-56), toY(-35));  // Montevideo / Rio de la Plata
+  ctx.lineTo(toX(-62), toY(-39));  // Bahia Blanca
+  ctx.lineTo(toX(-65), toY(-47));  // Patagonia / Golfo San Jorge
+  ctx.lineTo(toX(-68), toY(-54));  // Tierra del Fuego
+  ctx.lineTo(toX(-67), toY(-56));  // Cape Horn
+  ctx.lineTo(toX(-74), toY(-52));  // Chilean Fjords
+  ctx.lineTo(toX(-73), toY(-40));  // Puerto Montt
+  ctx.lineTo(toX(-71), toY(-33));  // Valparaiso / Santiago
+  ctx.lineTo(toX(-70), toY(-23));  // Antofagasta
+  ctx.lineTo(toX(-77), toY(-12));  // Lima / Peru coast
+  ctx.lineTo(toX(-81), toY(-5));   // Punta Pariñas
+  ctx.lineTo(toX(-80), toY(0));    // Guayaquil / Ecuador
+  ctx.lineTo(toX(-78), toY(5));    // Buenaventura / Colombia Pacific
+  ctx.closePath();
+  ctx.fill();
+
+  // F. AUSTRALIA (Accurate lat/lon polygon array)
+  ctx.fillStyle = '#424a2c'; // Arid bushland tone
+  ctx.beginPath();
+  ctx.moveTo(toX(142), toY(-10.5)); // Cape York tip
+  ctx.lineTo(toX(145), toY(-17));   // Cairns
+  ctx.lineTo(toX(150), toY(-23));   // Rockhampton
+  ctx.lineTo(toX(153), toY(-28));   // Brisbane
+  ctx.lineTo(toX(151), toY(-34));   // Sydney
+  ctx.lineTo(toX(147), toY(-38));   // Wilsons Promontory / Victoria
+  ctx.lineTo(toX(141), toY(-38));   // Mount Gambier
+  ctx.lineTo(toX(138), toY(-35));   // Adelaide / Spencer Gulf
+  ctx.lineTo(toX(133), toY(-32));   // Great Australian Bight head
+  ctx.lineTo(toX(124), toY(-33));   // Esperance
+  ctx.lineTo(toX(115), toY(-34));   // Cape Leeuwin
+  ctx.lineTo(toX(115), toY(-32));   // Perth
+  ctx.lineTo(toX(114), toY(-26));   // Shark Bay
+  ctx.lineTo(toX(114), toY(-22));   // North West Cape
+  ctx.lineTo(toX(119), toY(-20));   // Port Hedland
+  ctx.lineTo(toX(122), toY(-17));   // Broome
+  ctx.lineTo(toX(128), toY(-14));   // Joseph Bonaparte Gulf
+  ctx.lineTo(toX(131), toY(-12));   // Darwin
+  ctx.lineTo(toX(136), toY(-12));   // Arnhem Land
+  ctx.lineTo(toX(136), toY(-16));   // Gulf of Carpentaria west
+  ctx.lineTo(toX(141), toY(-17));   // Gulf of Carpentaria south
+  ctx.closePath();
   ctx.fill();
 
   // E. SOUTHEAST ASIA & EAST ASIA
@@ -209,11 +288,24 @@ export function getProceduralEarthTexture(): THREE.CanvasTexture {
   ctx.ellipse(toX(72.0), toY(27.0), toX(3) - toX(0), toY(0) - toY(2.5), -0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sri Lanka (Distinct Teardrop shape at 7.8°N, 80.8°E)
+  // Sri Lanka (Accurate Teardrop Polygon off Tamil Nadu coast)
   ctx.fillStyle = '#2c582e';
   ctx.beginPath();
-  ctx.ellipse(toX(80.7), toY(7.8), toX(1.3) - toX(0), toY(0) - toY(2.1), 0.15, 0, Math.PI * 2);
+  ctx.moveTo(toX(80.2), toY(9.8));  // Point Pedro
+  ctx.lineTo(toX(79.8), toY(9.3));  // Jaffna Peninsula west
+  ctx.lineTo(toX(79.7), toY(8.8));  // Mannar Island
+  ctx.lineTo(toX(79.8), toY(7.0));  // Colombo / Negombo
+  ctx.lineTo(toX(80.2), toY(6.0));  // Galle
+  ctx.lineTo(toX(80.6), toY(5.9));  // Dondra Head (South tip)
+  ctx.lineTo(toX(81.2), toY(6.2));  // Hambantota
+  ctx.lineTo(toX(81.8), toY(7.0));  // Arugam Bay / Pottuvil
+  ctx.lineTo(toX(81.6), toY(8.0));  // Batticaloa
+  ctx.lineTo(toX(81.2), toY(8.8));  // Trincomalee Bay
+  ctx.closePath();
   ctx.fill();
+  ctx.strokeStyle = '#1d74c9';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
 
   // Snow-capped Himalayan Ridge (#f8fafc)
   ctx.strokeStyle = '#f8fafc';

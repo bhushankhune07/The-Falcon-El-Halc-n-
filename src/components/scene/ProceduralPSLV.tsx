@@ -275,16 +275,22 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <meshStandardMaterial color="#ea580c" metalness={0.5} roughness={0.3} />
           </mesh>
 
-          {/* ISRO Tricolour Decal Ring */}
+          {/* ISRO Tricolour Decal Ring (openEnded to eliminate end-cap z-fighting) */}
           <mesh position={[0, ps1Height * 0.15, 0]}>
-            <cylinderGeometry args={[coreRadius + 0.015, coreRadius + 0.015, 4.0, 32]} />
+            <cylinderGeometry args={[coreRadius + 0.015, coreRadius + 0.015, 4.0, 32, 1, true]} />
             <meshStandardMaterial map={decalTexture} transparent roughness={0.4} />
           </mesh>
 
-          {/* Base Red-Orange Transition Ring */}
+          {/* Base Red-Orange Transition Ring (openEnded to prevent coplanar base flickering) */}
           <mesh position={[0, -ps1Height / 2 + 1.2, 0]}>
-            <cylinderGeometry args={[coreRadius + 0.02, coreRadius + 0.02, 2.4, 32]} />
+            <cylinderGeometry args={[coreRadius + 0.02, coreRadius + 0.02, 2.4, 32, 1, true]} />
             <meshStandardMaterial color="#ea580c" roughness={0.4} metalness={0.2} />
+          </mesh>
+
+          {/* Single clean dark-metallic thrust-structure bulkhead disc recessed cleanly at base of PS1 */}
+          <mesh position={[0, -ps1Height / 2 - 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[coreRadius, 32]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.35} side={THREE.DoubleSide} />
           </mesh>
 
           {/* PS1 Core Engine Parabolic Bell Nozzle */}

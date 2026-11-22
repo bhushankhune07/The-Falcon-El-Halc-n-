@@ -137,7 +137,12 @@ export function LaunchView({
   const [internalDeepSpaceActive, setInternalDeepSpaceActive] = useState(false);
   const deepSpaceActive = controlledDeepSpaceActive !== undefined ? controlledDeepSpaceActive : internalDeepSpaceActive;
   const setDeepSpaceActive = onToggleDeepSpace ?? setInternalDeepSpaceActive;
-  const [deepSpacePhase, setDeepSpacePhase] = useState(0.35);
+  const [deepSpacePhase, setDeepSpacePhase] = useState(0.0);
+
+  // Reset transfer progress to 0% on mission switch
+  useEffect(() => {
+    setDeepSpacePhase(0.0);
+  }, [mission.id]);
 
   const isDeepSpaceMission = mission.id === 'pslv-c25-mom' || mission.id === 'pslv-c57-aditya-l1';
 
@@ -238,13 +243,15 @@ export function LaunchView({
             )}
           </div>
 
-          {/* Discovery Tip Pill for Payload Inspector */}
-          <div className="absolute top-16 right-4 z-10 pointer-events-none hidden sm:block">
-            <div className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur border border-slate-700/60 text-[10px] font-mono text-cyan-300 shadow-lg flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-              <span>Tip: Click any rocket stage or spacecraft in 3D to inspect payloads</span>
+          {/* Discovery Tip Pill for Payload Inspector (hidden during orbital commissioning) */}
+          {!simFrame.ps4Cutoff ? (
+            <div className="absolute top-16 right-4 z-10 pointer-events-none hidden sm:block">
+              <div className="px-2.5 py-1 rounded-full bg-slate-900/85 backdrop-blur border border-slate-700/60 text-[10px] font-mono text-cyan-300 shadow-lg flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span>Tip: Click any rocket stage or spacecraft in 3D to inspect payloads</span>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Top-Right "Skip to Orbit & Data" Judge Demo Button */}
           <div className="absolute top-4 right-4 z-10">

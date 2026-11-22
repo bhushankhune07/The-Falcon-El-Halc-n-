@@ -1,4 +1,4 @@
-# BharatLaunch 3D: T-0 to First Pixel
+# Urdhva: T-0 to First Pixel — Interactive ISRO Mission Lab
 > **Browser-Based 3D ISRO Rocket Ascent Simulator & Satellite Data Explorer**  
 > *Developed for the ASTRA 2026 Hackathon*
 
@@ -10,7 +10,7 @@
 
 ## 🚀 Executive Summary
 
-**BharatLaunch 3D** simulates an ISRO polar satellite launch from **T-0 liftoff at Satish Dhawan Space Centre (SDSC SHAR), Sriharikota** to **first pixel orbital imaging** by the EOS-04 C-band Synthetic Aperture Radar (SAR) satellite.
+**Urdhva** simulates an ISRO polar satellite launch from **T-0 liftoff at Satish Dhawan Space Centre (SDSC SHAR), Sriharikota** to **first pixel orbital imaging** by the EOS-04 C-band Synthetic Aperture Radar (SAR) satellite.
 
 Built with **React, Vite, TypeScript, Tailwind CSS, Three.js (@react-three/fiber), Leaflet, Recharts, and Vitest**, the application bridges numerical astrodynamics with interactive web visualization and open Earth Observation data science.
 
@@ -209,4 +209,4 @@ Every displayed metric and asset is classified under our transparent three-tier 
 - **AI-Assisted Development Disclosure**: Developed with assistance from Google DeepMind Antigravity for automated numerical modeling, procedural 3D math, and test verification.
 
 ---
-*BharatLaunch 3D &bull; ASTRA 2026 Hackathon &bull; MIT License*
+*Urdhva &bull; ASTRA 2026 Hackathon &bull; MIT License*

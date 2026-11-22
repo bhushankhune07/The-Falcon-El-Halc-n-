@@ -1,5 +1,5 @@
 /**
- * BharatLaunch 3D: Scene Telemetry & Camera Types
+ * Urdhva: Scene Telemetry & Camera Types
  * Binds directly to the simulation engine telemetry state.
  */
 
