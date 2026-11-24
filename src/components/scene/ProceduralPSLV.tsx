@@ -114,6 +114,295 @@ function BellNozzle({
   );
 }
 
+export interface RealisticPS4StageProps {
+  blueprintMode?: boolean;
+  isFiring?: boolean;
+  hasDeorbitPlume?: boolean;
+  reentryGlow?: number; // 0.0 to 1.0 (for fiery atmospheric burn-up)
+  onClick?: (e: any) => void;
+  onPointerOver?: (e: any) => void;
+  onPointerOut?: () => void;
+  scale?: number | [number, number, number];
+}
+
+/**
+ * High-Fidelity Procedural ISRO PSLV Fourth Stage (PS4):
+ * - Conical Vehicle Equipment Bay (VEB) & Payload Adapter (PLA)
+ * - Open/semi-open titanium-aluminum structural cage with visible internal propellant tanks
+ * - Twin spherical propellant tanks (MMH fuel in amber/gold MLI, MON-3 oxidizer in silver MLI)
+ * - Twin gimbaled liquid engine bell nozzles with titanium-niobium extensions & actuator struts
+ * - 4 Reaction Control System (RCS) cold-gas / hydrazine thruster quads around VEB collar
+ */
+export function RealisticPS4Stage({
+  blueprintMode = false,
+  isFiring = false,
+  hasDeorbitPlume = false,
+  reentryGlow = 0,
+  onClick,
+  onPointerOver,
+  onPointerOut,
+  scale = 1,
+}: RealisticPS4StageProps) {
+  const effectiveFiring = isFiring || hasDeorbitPlume;
+
+  return (
+    <group
+      scale={scale}
+      onClick={onClick}
+      onPointerOver={onPointerOver}
+      onPointerOut={onPointerOut}
+    >
+      {/* 1. Conical Vehicle Equipment Bay (VEB) & Upper Payload Adapter (PLA) */}
+      <group position={[0, 0.85, 0]}>
+        {/* Upper PLA Ring */}
+        <mesh position={[0, 0.38, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.72, 0.72, 0.2, 28]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" emissive="#00f0ff" emissiveIntensity={0.5} />
+          ) : (
+            <meshStandardMaterial color="#64748b" metalness={0.88} roughness={0.24} />
+          )}
+        </mesh>
+
+        {/* Payload Separation Interface Gold Clamp Band */}
+        <mesh position={[0, 0.47, 0]}>
+          <torusGeometry args={[0.73, 0.025, 8, 32]} />
+          <meshStandardMaterial color="#f59e0b" metalness={0.92} roughness={0.2} />
+        </mesh>
+
+        {/* Conical VEB Transition Shell */}
+        <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.72, 1.05, 0.52, 28, 1, true]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" emissive="#00f0ff" emissiveIntensity={0.5} />
+          ) : (
+            <meshStandardMaterial
+              color="#e2e8f0"
+              metalness={0.4}
+              roughness={0.32}
+              side={THREE.DoubleSide}
+            />
+          )}
+        </mesh>
+
+        {/* Internal Avionics & Guidance Boxes inside VEB collar */}
+        {[-0.45, 0.45].map((x, idx) => (
+          <mesh key={`avionics-${idx}`} position={[x, 0.08, 0]}>
+            <boxGeometry args={[0.24, 0.18, 0.22]} />
+            <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+          </mesh>
+        ))}
+
+        {/* 4 RCS Thruster Quads around VEB perimeter */}
+        {[
+          { pos: [1.02, 0.1, 0] as [number, number, number], rot: [0, 0, -Math.PI / 2] as [number, number, number] },
+          { pos: [-1.02, 0.1, 0] as [number, number, number], rot: [0, 0, Math.PI / 2] as [number, number, number] },
+          { pos: [0, 0.1, 1.02] as [number, number, number], rot: [Math.PI / 2, 0, 0] as [number, number, number] },
+          { pos: [0, 0.1, -1.02] as [number, number, number], rot: [-Math.PI / 2, 0, 0] as [number, number, number] },
+        ].map((rcs, idx) => (
+          <group key={`rcs-quad-${idx}`} position={rcs.pos} rotation={rcs.rot}>
+            {/* Housing Block */}
+            <mesh>
+              <boxGeometry args={[0.12, 0.14, 0.12]} />
+              <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.25} />
+            </mesh>
+            {/* 2 Visible Micro-Nozzles */}
+            <mesh position={[0, 0.1, 0.04]} rotation={[0, 0, 0]}>
+              <coneGeometry args={[0.035, 0.08, 8]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, 0.1, -0.04]} rotation={[0, 0, 0]}>
+              <coneGeometry args={[0.035, 0.08, 8]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
+      {/* 2. Open Titanium-Aluminum Skeletal Structural Frame */}
+      <group position={[0, 0, 0]}>
+        {/* 6 Vertical Tubular Support Struts */}
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const angle = (i * Math.PI) / 3;
+          const r = 0.98;
+          return (
+            <mesh
+              key={`ps4-strut-${i}`}
+              position={[Math.cos(angle) * r, 0.02, Math.sin(angle) * r]}
+            >
+              <cylinderGeometry args={[0.038, 0.038, 1.25, 8]} />
+              <meshStandardMaterial color="#94a3b8" metalness={0.86} roughness={0.25} />
+            </mesh>
+          );
+        })}
+
+        {/* Intermediate Structural Stiffener Ring */}
+        <mesh position={[0, 0.02, 0]}>
+          <torusGeometry args={[0.98, 0.032, 8, 28]} />
+          <meshStandardMaterial color="#64748b" metalness={0.88} roughness={0.22} />
+        </mesh>
+
+        {/* Lower Engine Thrust Bulkhead / Base Ring */}
+        <mesh position={[0, -0.62, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[1.05, 1.05, 0.14, 28]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" emissive="#00f0ff" emissiveIntensity={0.5} />
+          ) : (
+            <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
+          )}
+        </mesh>
+      </group>
+
+      {/* 3. Internal Spherical/Oblate Propellant Tanks (Visible between struts) */}
+      <group position={[0, 0.02, 0]}>
+        {/* MMH Fuel Tank (Warm Gold/Amber MLI Thermal Blanket) */}
+        <mesh position={[-0.46, 0.04, 0]} scale={[1.0, 0.94, 1.0]} castShadow>
+          <sphereGeometry args={[0.44, 24, 20]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" emissive="#00f0ff" emissiveIntensity={0.5} />
+          ) : (
+            <meshStandardMaterial
+              color="#f59e0b"
+              metalness={0.88}
+              roughness={0.22}
+              emissive="#78350f"
+              emissiveIntensity={0.12}
+            />
+          )}
+        </mesh>
+
+        {/* MON-3 Oxidizer Tank (Polished Radiant Silver/Titanium MLI) */}
+        <mesh position={[0.46, 0.04, 0]} scale={[1.0, 0.94, 1.0]} castShadow>
+          <sphereGeometry args={[0.44, 24, 20]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" emissive="#00f0ff" emissiveIntensity={0.5} />
+          ) : (
+            <meshStandardMaterial
+              color="#e2e8f0"
+              metalness={0.96}
+              roughness={0.16}
+            />
+          )}
+        </mesh>
+
+        {/* 2 High-Pressure Helium Pressurization Composite Bottles */}
+        <mesh position={[0, 0.06, 0.52]} scale={[0.9, 1.15, 0.9]}>
+          <sphereGeometry args={[0.18, 16, 16]} />
+          <meshStandardMaterial color="#0f172a" metalness={0.65} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 0.06, -0.52]} scale={[0.9, 1.15, 0.9]}>
+          <sphereGeometry args={[0.18, 16, 16]} />
+          <meshStandardMaterial color="#0f172a" metalness={0.65} roughness={0.4} />
+        </mesh>
+
+        {/* External Propellant Feed Pipes to Engines */}
+        <mesh position={[-0.41, -0.42, 0]} rotation={[0, 0, -0.2]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.44, 8]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+        </mesh>
+        <mesh position={[0.41, -0.42, 0]} rotation={[0, 0, 0.2]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.44, 8]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.92} roughness={0.2} />
+        </mesh>
+      </group>
+
+      {/* 4. Twin Gimbaled PS4 Engine Bell Nozzles (Mounted at Base) */}
+      <group position={[0, -0.7, 0]}>
+        {/* Left Liquid Engine Nozzle */}
+        <group position={[-0.36, 0, 0]}>
+          <BellNozzle
+            throatRadius={0.08}
+            exitRadius={0.24}
+            height={0.78}
+            isFiring={effectiveFiring}
+            glowColor={hasDeorbitPlume ? '#38bdf8' : '#e0f2fe'}
+          />
+          {/* De-orbit Plume Cone */}
+          {hasDeorbitPlume && (
+            <mesh position={[0, -0.85, 0]} rotation={[Math.PI, 0, 0]}>
+              <coneGeometry args={[0.24, 1.2, 16, 1, true]} />
+              <meshBasicMaterial
+                color="#38bdf8"
+                transparent
+                opacity={0.82}
+                side={THREE.DoubleSide}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
+        </group>
+
+        {/* Right Liquid Engine Nozzle */}
+        <group position={[0.36, 0, 0]}>
+          <BellNozzle
+            throatRadius={0.08}
+            exitRadius={0.24}
+            height={0.78}
+            isFiring={effectiveFiring}
+            glowColor={hasDeorbitPlume ? '#38bdf8' : '#e0f2fe'}
+          />
+          {/* De-orbit Plume Cone */}
+          {hasDeorbitPlume && (
+            <mesh position={[0, -0.85, 0]} rotation={[Math.PI, 0, 0]}>
+              <coneGeometry args={[0.24, 1.2, 16, 1, true]} />
+              <meshBasicMaterial
+                color="#38bdf8"
+                transparent
+                opacity={0.82}
+                side={THREE.DoubleSide}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
+        </group>
+      </group>
+
+      {/* 5. Atmospheric Re-entry Fiery Plasma Envelope & Burn-up Glow */}
+      {reentryGlow > 0.01 && (
+        <group>
+          {/* Fiery Re-entry Plasma Sheath */}
+          <mesh>
+            <sphereGeometry args={[1.45, 24, 18]} />
+            <meshBasicMaterial
+              color="#ef4444"
+              transparent
+              opacity={Math.min(0.85, reentryGlow * 0.9)}
+              blending={THREE.AdditiveBlending}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+          {/* Inner Incandescent Core */}
+          <mesh>
+            <sphereGeometry args={[1.2, 20, 16]} />
+            <meshBasicMaterial
+              color="#fbbf24"
+              transparent
+              opacity={Math.min(0.9, reentryGlow * 0.95)}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+          {/* Re-entry Trail Cone */}
+          <mesh position={[0, 1.8, 0]} rotation={[0, 0, 0]}>
+            <coneGeometry args={[1.3, 3.8, 16, 1, true]} />
+            <meshBasicMaterial
+              color="#f97316"
+              transparent
+              opacity={Math.min(0.7, reentryGlow * 0.75)}
+              blending={THREE.AdditiveBlending}
+              side={THREE.DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        </group>
+      )}
+    </group>
+  );
+}
+
 export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverComponent }: Props) {
   const rootRef = useRef<THREE.Group>(null);
   const fairingLeftRef = useRef<THREE.Group>(null);
@@ -540,56 +829,15 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       ) : null}
 
       {/* ======================================================== */}
-      {/* STAGE 4: PS4 TWIN LIQUID ENGINES (MMH + MON3) */}
+      {/* STAGE 4: REALISTIC PS4 TWIN LIQUID ENGINES (MMH + MON3)   */}
       {/* ======================================================== */}
-      <group
-        position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}
-        onClick={(e) => handleClick(e, 'ps4_twin')}
-        onPointerOver={(e) => handlePointerOver(e, 'ps4_twin')}
-        onPointerOut={handlePointerOut}
-      >
-        {/* Upper Stage Equipment Bay & Tanks */}
-        <mesh castShadow receiveShadow>
-          <cylinderGeometry args={[coreRadius * 0.75, coreRadius * 0.75, ps4Height, 28]} />
-          <meshStandardMaterial
-            color="#e2e8f0"
-            roughness={0.32}
-            metalness={0.4}
-            bumpMap={fuselageTextures.bumpMap}
-            bumpScale={0.04}
-            roughnessMap={fuselageTextures.roughnessMap}
-          />
-        </mesh>
-
-        {/* Spherical Titanium Fuel Tanks */}
-        <mesh position={[0.5, 0, 0]}>
-          <sphereGeometry args={[0.45, 16, 16]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
-        </mesh>
-        <mesh position={[-0.5, 0, 0]}>
-          <sphereGeometry args={[0.45, 16, 16]} />
-          <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.3} />
-        </mesh>
-
-        {/* Twin Gimbal Parabolic Engines */}
-        <group position={[0.35, -ps4Height / 2 - 0.1, 0]}>
-          <BellNozzle
-            throatRadius={0.09}
-            exitRadius={0.26}
-            height={0.85}
-            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
-            glowColor="#e0f2fe"
-          />
-        </group>
-        <group position={[-0.35, -ps4Height / 2 - 0.1, 0]}>
-          <BellNozzle
-            throatRadius={0.09}
-            exitRadius={0.26}
-            height={0.85}
-            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
-            glowColor="#e0f2fe"
-          />
-        </group>
+      <group position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}>
+        <RealisticPS4Stage
+          isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
+          onClick={(e) => handleClick(e, 'ps4_twin')}
+          onPointerOver={(e) => handlePointerOver(e, 'ps4_twin')}
+          onPointerOut={handlePointerOut}
+        />
       </group>
 
       {/* ======================================================== */}

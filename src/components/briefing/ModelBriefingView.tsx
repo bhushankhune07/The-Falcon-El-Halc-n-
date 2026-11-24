@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -28,6 +28,7 @@ import {
 import {
   getProceduralMarsPBRTextures,
   createSunShaderMaterial,
+  createSunCoronaShaderMaterial,
 } from '../scene/textures/proceduralTextures';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from '../scene/inspectData';
 
@@ -413,7 +414,11 @@ export function ModelBriefingView() {
       {/* ======================================================== */}
       {/* CENTER: 3D STUDIO SHOWROOM CANVAS (~50% WIDTH)           */}
       {/* ======================================================== */}
-      <section className="flex-1 h-full min-h-[400px] relative bg-[#f1f5f9] overflow-hidden flex flex-col">
+      <section
+        className={`flex-1 h-full min-h-[400px] relative overflow-hidden flex flex-col transition-colors duration-300 ${
+          blueprintMode ? 'bg-[#020617]' : 'bg-[#dce3ec]'
+        }`}
+      >
         {/* Top Floating Studio Controls Bar */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           {/* Active Model Pill */}
@@ -464,12 +469,18 @@ export function ModelBriefingView() {
               }}
               camera={{ position: [0, 6, 32], fov: 46, near: 0.1, far: 50000 }}
             >
-              {/* Bright Studio 3-Point + Hemisphere Lighting */}
-              <ambientLight intensity={1.1} />
-              <hemisphereLight args={['#ffffff', '#cbd5e1', 1.0]} />
-              <directionalLight position={[25, 40, 30]} intensity={2.2} castShadow />
-              <directionalLight position={[-25, 20, -20]} intensity={1.4} />
-              <directionalLight position={[0, -10, 20]} intensity={0.6} />
+              {/* Cleanroom Atmospheric Fog matching background */}
+              <fog attach="fog" args={[blueprintMode ? '#020617' : '#dce3ec', 75, 210]} />
+
+              {/* Bright Studio 3-Point + Cleanroom Overhead Lighting */}
+              <ambientLight intensity={1.15} />
+              <hemisphereLight args={['#ffffff', '#cbd5e1', 1.25]} />
+              <directionalLight position={[35, 55, 35]} intensity={2.4} castShadow />
+              <directionalLight position={[-35, 30, -25]} intensity={1.5} />
+              <directionalLight position={[0, -10, 25]} intensity={0.7} />
+
+              {/* High-Bay Overhead LED Light Fixture */}
+              <pointLight position={[0, 46, 0]} intensity={2.6} distance={80} color="#ffffff" />
 
               {/* 360° Studio Orbit Controls */}
               <OrbitControls
@@ -481,17 +492,8 @@ export function ModelBriefingView() {
                 minDistance={6}
               />
 
-              {/* Soft Studio Floor Shadow Disc */}
-              <group position={[0, -18.0, 0]}>
-                <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-                  <ringGeometry args={[0, 24, 64]} />
-                  <meshBasicMaterial
-                    color="#94a3b8"
-                    transparent
-                    opacity={blueprintMode ? 0.2 : 0.35}
-                  />
-                </mesh>
-              </group>
+              {/* ISRO Spacecraft Cleanroom & Assembly Hangar 3D Environment */}
+              <CleanroomHangarEnvironment blueprintMode={blueprintMode} />
 
               {/* Model Presentation Group */}
               <StudioModelRenderer
@@ -696,6 +698,184 @@ export function ModelBriefingView() {
 }
 
 /**
+ * ISRO Vehicle Assembly Cleanroom & Spacecraft Hangar 3D Environment
+ * Procedural high-bay facility with epoxy floor, yellow-black hazard ring,
+ * metallic turntable pedestal, structural gantry columns, overhead roof trusses & LED high-bay strips.
+ */
+function CleanroomHangarEnvironment({ blueprintMode = false }: { blueprintMode?: boolean }) {
+  return (
+    <group>
+      {/* 1. Industrial Epoxy Cleanroom Floor */}
+      <mesh position={[0, -18.25, 0]} receiveShadow>
+        <cylinderGeometry args={[80, 80, 0.4, 48]} />
+        <meshStandardMaterial
+          color={blueprintMode ? '#030712' : '#cbd5e1'}
+          metalness={blueprintMode ? 0.2 : 0.38}
+          roughness={blueprintMode ? 0.8 : 0.26}
+        />
+      </mesh>
+
+      {/* Floor Tile Grid Overlay */}
+      <gridHelper
+        args={[140, 28, blueprintMode ? '#06b6d4' : '#94a3b8', blueprintMode ? '#1e293b' : '#cbd5e1']}
+        position={[0, -18.04, 0]}
+      />
+
+      {/* 2. Yellow-Black Turntable Hazard Warning Safety Ring */}
+      <group position={[0, -18.03, 0]}>
+        {Array.from({ length: 24 }).map((_, i) => {
+          const thetaStart = (i * Math.PI * 2) / 24;
+          const thetaLength = (Math.PI * 2) / 24;
+          const isYellow = i % 2 === 0;
+          return (
+            <mesh key={`hazard-segment-${i}`} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[20.2, 22.8, 6, 1, thetaStart, thetaLength]} />
+              <meshStandardMaterial
+                color={blueprintMode ? (isYellow ? '#00f0ff' : '#0f172a') : isYellow ? '#eab308' : '#0f172a'}
+                roughness={0.4}
+                metalness={0.2}
+              />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* 3. Sleek Circular Metallic Inspection Turntable Platform */}
+      <mesh position={[0, -18.02, 0]} receiveShadow>
+        <cylinderGeometry args={[19.6, 20.0, 0.35, 48]} />
+        <meshStandardMaterial
+          color={blueprintMode ? '#0f172a' : '#94a3b8'}
+          metalness={blueprintMode ? 0.5 : 0.82}
+          roughness={blueprintMode ? 0.5 : 0.22}
+        />
+      </mesh>
+
+      {/* Turntable Perimeter LED Rim Indicator */}
+      <mesh position={[0, -17.84, 0]}>
+        <torusGeometry args={[19.6, 0.08, 8, 48]} />
+        <meshBasicMaterial color={blueprintMode ? '#00f0ff' : '#38bdf8'} />
+      </mesh>
+
+      {/* 4. Surrounding High-Bay Space-Center Architecture: Vertical Gantry Truss Columns */}
+      {Array.from({ length: 6 }).map((_, i) => {
+        const angle = (i * Math.PI * 2) / 6;
+        const cx = Math.cos(angle) * 52;
+        const cz = Math.sin(angle) * 52;
+        return (
+          <group key={`cleanroom-column-${i}`} position={[cx, 16, cz]}>
+            {/* 4 Corner Tubular Steel Legs */}
+            <mesh position={[-0.7, 0, -0.7]}>
+              <boxGeometry args={[0.25, 68, 0.25]} />
+              <meshStandardMaterial
+                color={blueprintMode ? '#0e7490' : '#94a3b8'}
+                metalness={0.8}
+                roughness={0.3}
+              />
+            </mesh>
+            <mesh position={[0.7, 0, -0.7]}>
+              <boxGeometry args={[0.25, 68, 0.25]} />
+              <meshStandardMaterial
+                color={blueprintMode ? '#0e7490' : '#94a3b8'}
+                metalness={0.8}
+                roughness={0.3}
+              />
+            </mesh>
+            <mesh position={[-0.7, 0, 0.7]}>
+              <boxGeometry args={[0.25, 68, 0.25]} />
+              <meshStandardMaterial
+                color={blueprintMode ? '#0e7490' : '#94a3b8'}
+                metalness={0.8}
+                roughness={0.3}
+              />
+            </mesh>
+            <mesh position={[0.7, 0, 0.7]}>
+              <boxGeometry args={[0.25, 68, 0.25]} />
+              <meshStandardMaterial
+                color={blueprintMode ? '#0e7490' : '#94a3b8'}
+                metalness={0.8}
+                roughness={0.3}
+              />
+            </mesh>
+            {/* Horizontal & Diagonal Cross Bracing Ties */}
+            {[-24, -12, 0, 12, 24].map((ly, lidx) => (
+              <mesh key={`column-brace-${lidx}`} position={[0, ly, 0]}>
+                <boxGeometry args={[1.5, 0.12, 1.5]} />
+                <meshStandardMaterial
+                  color={blueprintMode ? '#0891b2' : '#cbd5e1'}
+                  metalness={0.7}
+                  roughness={0.35}
+                />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+
+      {/* 5. Overhead Steel Roof Trusses & Glowing White LED High-Bay Light Strips */}
+      <group position={[0, 48, 0]}>
+        {/* Longitudinal & Transverse Structural Roof Beams */}
+        {[-22, 0, 22].map((z, idx) => (
+          <mesh key={`roof-beam-${idx}`} position={[0, 0, z]}>
+            <boxGeometry args={[95, 0.6, 0.6]} />
+            <meshStandardMaterial
+              color={blueprintMode ? '#0891b2' : '#94a3b8'}
+              metalness={0.85}
+              roughness={0.25}
+            />
+          </mesh>
+        ))}
+
+        {/* Glowing White LED High-Bay Light Fixtures */}
+        {[-16, 16].map((z, lidx) => (
+          <group key={`highbay-fixture-${lidx}`} position={[0, -0.4, z]}>
+            {/* Fixture Body */}
+            <mesh>
+              <boxGeometry args={[48, 0.25, 1.2]} />
+              <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+            </mesh>
+            {/* Glowing Emissive LED Light Surface */}
+            <mesh position={[0, -0.15, 0]}>
+              <boxGeometry args={[46, 0.05, 0.9]} />
+              <meshStandardMaterial
+                color="#ffffff"
+                emissive="#ffffff"
+                emissiveIntensity={blueprintMode ? 0.4 : 1.8}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+
+      {/* 6. Cleanroom High-Bay Wall Panels (Backdrop) */}
+      <mesh position={[0, 18, -62]} receiveShadow>
+        <boxGeometry args={[130, 72, 1.5]} />
+        <meshStandardMaterial
+          color={blueprintMode ? '#020617' : '#e2e8f0'}
+          metalness={0.2}
+          roughness={0.4}
+        />
+      </mesh>
+      <mesh position={[-62, 18, 0]} receiveShadow>
+        <boxGeometry args={[1.5, 72, 125]} />
+        <meshStandardMaterial
+          color={blueprintMode ? '#020617' : '#e2e8f0'}
+          metalness={0.2}
+          roughness={0.4}
+        />
+      </mesh>
+      <mesh position={[62, 18, 0]} receiveShadow>
+        <boxGeometry args={[1.5, 72, 125]} />
+        <meshStandardMaterial
+          color={blueprintMode ? '#020617' : '#e2e8f0'}
+          metalness={0.2}
+          roughness={0.4}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+/**
  * 3D Sub-Renderer routing to appropriate 3D model geometry
  */
 function StudioModelRenderer({
@@ -715,13 +895,27 @@ function StudioModelRenderer({
 }) {
   const marsPBR = useMemo(() => getProceduralMarsPBRTextures(), []);
   const sunMaterial = useMemo(() => createSunShaderMaterial(), []);
+  const sunCoronaMaterial = useMemo(() => createSunCoronaShaderMaterial(), []);
 
   const sunGroupRef = useRef<THREE.Group>(null);
   const marsGroupRef = useRef<THREE.Group>(null);
 
+  useEffect(() => {
+    return () => {
+      sunMaterial.dispose();
+      sunCoronaMaterial.dispose();
+      marsPBR.map.dispose();
+      marsPBR.bumpMap.dispose();
+      marsPBR.roughnessMap.dispose();
+    };
+  }, [sunMaterial, sunCoronaMaterial, marsPBR]);
+
   useFrame((_, delta) => {
     if (sunMaterial.uniforms?.uTime) {
       sunMaterial.uniforms.uTime.value += delta;
+    }
+    if (sunCoronaMaterial.uniforms?.uTime) {
+      sunCoronaMaterial.uniforms.uTime.value += delta;
     }
     if (sunGroupRef.current) {
       sunGroupRef.current.rotation.y += delta * 0.05;
@@ -832,17 +1026,10 @@ function StudioModelRenderer({
           <sphereGeometry args={[11.0, 64, 48]} />
           {blueprintMode && <meshStandardMaterial wireframe color="#00f0ff" />}
         </mesh>
-        {/* Pulsating solar corona shell */}
-        <mesh>
-          <sphereGeometry args={[13.2, 36, 28]} />
-          <meshBasicMaterial
-            color="#fde047"
-            transparent
-            opacity={0.35}
-            blending={THREE.AdditiveBlending}
-            side={THREE.BackSide}
-            depthWrite={false}
-          />
+        {/* Smooth GLSL Additive Solar Corona Glow */}
+        <mesh material={blueprintMode ? undefined : sunCoronaMaterial}>
+          <sphereGeometry args={[14.2, 48, 36]} />
+          {blueprintMode && <meshStandardMaterial wireframe color="#00f0ff" transparent opacity={0.3} />}
         </mesh>
         <pointLight color="#fef08a" intensity={4.8} distance={140} decay={2} />
       </group>

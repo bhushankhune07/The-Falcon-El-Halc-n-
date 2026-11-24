@@ -554,6 +554,62 @@ export function createSunShaderMaterial(): THREE.ShaderMaterial {
 }
 
 /**
+ * Procedural GLSL Smooth Additive Sun Corona Glow Shader
+ * Smooth Fresnel falloff fading strictly to alpha = 0.0 before the mesh silhouette.
+ * Eliminates all concentric hard brown/tan circle rims.
+ */
+export function createSunCoronaShaderMaterial(
+  innerColor = '#fef08a',
+  outerColor = '#ea580c'
+): THREE.ShaderMaterial {
+  const vertexShader = `
+    varying vec3 vNormal;
+    varying vec3 vEyeVec;
+    varying vec2 vUv;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      vEyeVec = normalize(-mvPosition.xyz);
+      vUv = uv;
+      gl_Position = projectionMatrix * mvPosition;
+    }
+  `;
+
+  const fragmentShader = `
+    uniform vec3 uColorInner;
+    uniform vec3 uColorOuter;
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vEyeVec;
+    varying vec2 vUv;
+
+    void main() {
+      float cosTheta = max(0.0, dot(vNormal, vEyeVec));
+      float rim = 1.0 - cosTheta;
+      float alpha = pow(rim, 3.2);
+      float ripple = 0.92 + 0.08 * sin(uTime * 1.8 + vUv.x * 24.0);
+      alpha *= ripple;
+      vec3 color = mix(uColorInner, uColorOuter, pow(rim, 1.4));
+      gl_FragColor = vec4(color * alpha, alpha * 0.72);
+    }
+  `;
+
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      uColorInner: { value: new THREE.Color(innerColor) },
+      uColorOuter: { value: new THREE.Color(outerColor) },
+      uTime: { value: 0 },
+    },
+    vertexShader,
+    fragmentShader,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    side: THREE.BackSide,
+    depthWrite: false,
+  });
+}
+
+/**
  * Custom GLSL Fresnel Atmosphere Rayleigh Scatter Shader
  */
 export function createAtmosphereShaderMaterial(

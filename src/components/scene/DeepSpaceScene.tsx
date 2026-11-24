@@ -5,6 +5,7 @@ import { ScaledEarth } from './ScaledEarth';
 import {
   getProceduralMarsPBRTextures,
   createSunShaderMaterial,
+  createSunCoronaShaderMaterial,
 } from './textures/proceduralTextures';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from './inspectData';
 import { MOMSpacecraft, AdityaL1Spacecraft } from './ProceduralSpacecraft';
@@ -31,6 +32,7 @@ export function DeepSpaceScene({
 
   const marsTextures = useMemo(() => getProceduralMarsPBRTextures(), []);
   const sunMaterial = useMemo(() => createSunShaderMaterial(), []);
+  const sunCoronaMaterial = useMemo(() => createSunCoronaShaderMaterial(), []);
 
   const isMOM = missionId === 'pslv-c25-mom';
   const isAditya = missionId === 'pslv-c57-aditya-l1';
@@ -43,9 +45,12 @@ export function DeepSpaceScene({
 
   // Dynamic animation loop
   useFrame((_, delta) => {
-    // 1. Sun plasma shader animation
+    // 1. Sun plasma shader & corona animation
     if (sunMaterial.uniforms?.uTime) {
       sunMaterial.uniforms.uTime.value += delta;
+    }
+    if (sunCoronaMaterial.uniforms?.uTime) {
+      sunCoronaMaterial.uniforms.uTime.value += delta;
     }
     if (coronaRef.current) {
       coronaRef.current.rotation.z += delta * 0.018;
@@ -57,7 +62,8 @@ export function DeepSpaceScene({
       marsRef.current.rotation.y += delta * 0.012;
     }
     if (marsGroupRef.current) {
-      const currentMarsAngle = -0.48 - Math.max(0, 0.67 - phaseProgress) * 0.45;
+      // Mars travels along heliocentric arc and meets probe at phaseProgress >= 0.80
+      const currentMarsAngle = -0.48 - Math.max(0, 0.80 - phaseProgress) * 0.45;
       const currentMarsX = Math.cos(currentMarsAngle) * 236;
       const currentMarsZ = Math.sin(currentMarsAngle) * 236;
       marsGroupRef.current.position.set(currentMarsX, 0, currentMarsZ);
@@ -68,137 +74,169 @@ export function DeepSpaceScene({
       l1ReticuleRef.current.rotation.z += delta * 0.4;
     }
 
-    // 4. Spacecraft position and attitude tracking
+    // 4. Spacecraft position and attitude tracking (Mathematically C0-continuous)
     if (probeGroupRef.current) {
       if (isMOM) {
-        if (phaseProgress < 0.33) {
+        if (phaseProgress < 0.10) {
           // ==========================================
-          // PHASE 1: Earth-bound Apogee-Raising Loops
+          // PHASE 1: Earth Launch Injection Arc (0% - 10%)
           // ==========================================
-          const p = phaseProgress / 0.33; // 0 to 1
-          // Apogee raising: loop index 0 to 5
-          const loopCount = 6;
-          const currentLoop = p * loopCount;
-          const loopFraction = currentLoop % 1.0;
-          const loopIndex = Math.floor(currentLoop);
+          const tau = phaseProgress / 0.10;
+          const p0X = earthCenter.x + 36;
+          const p0Y = earthCenter.y - 12;
+          const p0Z = earthCenter.z - 18;
+          const injX = earthCenter.x + 35.7;
+          const injY = earthCenter.y;
+          const injZ = earthCenter.z;
 
-          // Eccentricity grows with each burn
-          const a = 42 + loopIndex * 8.5; // Semi-major axis
-          const e = 0.15 + loopIndex * 0.11; // Eccentricity
-          const b = a * Math.sqrt(Math.max(0.01, 1 - e * e)); // Semi-minor axis
-
-          // Angle along orbit
-          const theta = loopFraction * Math.PI * 2;
-          const localX = a * Math.cos(theta) - a * e;
-          const localZ = b * Math.sin(theta);
-          const localY = Math.sin(theta) * (4 + loopIndex * 1.5);
-
-          const posX = earthCenter.x + localX;
-          const posY = earthCenter.y + localY;
-          const posZ = earthCenter.z + localZ;
-
+          const posX = p0X + tau * (injX - p0X);
+          const posY = p0Y + Math.sin(tau * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tau * Math.PI) * 6;
+          const posZ = p0Z + tau * (injZ - p0Z);
           probeGroupRef.current.position.set(posX, posY, posZ);
 
-          // Compute tangent velocity vector for forward attitude
-          const nextTheta = (loopFraction + 0.01) * Math.PI * 2;
-          const nextX = earthCenter.x + (a * Math.cos(nextTheta) - a * e);
-          const nextZ = earthCenter.z + b * Math.sin(nextTheta);
-          const nextY = earthCenter.y + Math.sin(nextTheta) * (4 + loopIndex * 1.5);
+          const tauNext = Math.min(1.0, tau + 0.02);
+          const nextX = p0X + tauNext * (injX - p0X);
+          const nextY = p0Y + Math.sin(tauNext * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tauNext * Math.PI) * 6;
+          const nextZ = p0Z + tauNext * (injZ - p0Z);
           probeGroupRef.current.lookAt(nextX, nextY, nextZ);
-        } else if (phaseProgress < 0.67) {
+        } else if (phaseProgress < 0.40) {
           // ==========================================
-          // PHASE 2: Heliocentric Hohmann Transfer
+          // PHASE 2: Earth-bound Apogee Raising Loops (10% - 40%)
           // ==========================================
-          const p = (phaseProgress - 0.33) / 0.34; // 0 to 1
-          // Departure tangent from Earth to Mars rendezvous
-          const t = p;
-          // Smooth bezier-like elliptic arc
-          const x = earthCenter.x + t * (marsRendezvous.x - earthCenter.x);
-          const y = Math.sin(t * Math.PI) * 48;
-          const z = earthCenter.z + t * (marsRendezvous.z - earthCenter.z) - Math.sin(t * Math.PI) * 28;
-
-          probeGroupRef.current.position.set(x, y, z);
-
-          // Orientation: Tangent to flight path
-          const tNext = Math.min(1.0, t + 0.01);
-          const nX = earthCenter.x + tNext * (marsRendezvous.x - earthCenter.x);
-          const nY = Math.sin(tNext * Math.PI) * 48;
-          const nZ = earthCenter.z + tNext * (marsRendezvous.z - earthCenter.z) - Math.sin(tNext * Math.PI) * 28;
-          probeGroupRef.current.lookAt(nX, nY, nZ);
-        } else {
-          // ==========================================
-          // PHASE 3: Mars Capture Orbit (421 km x 76,993 km)
-          // ==========================================
-          const p = (phaseProgress - 0.67) / 0.33; // 0 to 1
-          const a = 46; // Semi-major axis
-          const b = 22; // High eccentricity
-          const theta = p * Math.PI * 6; // 3 full revolutions in phase
-          const tilt = 0.55; // 35 deg inclination
-
-          const orbX = a * Math.cos(theta);
-          const orbZ = b * Math.sin(theta);
-          const rotY = orbZ * Math.sin(tilt);
-          const rotZ = orbZ * Math.cos(tilt);
-
-          probeGroupRef.current.position.set(
-            marsRendezvous.x + orbX,
-            marsRendezvous.y + rotY,
-            marsRendezvous.z + rotZ
-          );
-
-          // Attitude: Scientific camera instruments pointed strictly toward Mars center
-          probeGroupRef.current.lookAt(marsRendezvous.x, marsRendezvous.y, marsRendezvous.z);
-        }
-      } else if (isAditya) {
-        if (phaseProgress < 0.33) {
-          // ==========================================
-          // PHASE 1: Earth-bound Expanding Loops
-          // ==========================================
-          const p = phaseProgress / 0.33;
+          const u = (phaseProgress - 0.10) / 0.30; // 0 to 1
           const loopCount = 5;
-          const currentLoop = p * loopCount;
+          const currentLoop = u * loopCount;
           const loopFraction = currentLoop % 1.0;
-          const loopIndex = Math.floor(currentLoop);
+          const loopIndex = Math.min(4, Math.floor(currentLoop));
 
-          const a = 40 + loopIndex * 7.5;
-          const e = 0.12 + loopIndex * 0.12;
+          const a = 42 + loopIndex * 10.0; // 42 -> 82
+          const e = 0.15 + loopIndex * 0.12; // 0.15 -> 0.63
           const b = a * Math.sqrt(Math.max(0.01, 1 - e * e));
 
           const theta = loopFraction * Math.PI * 2;
           const posX = earthCenter.x + (a * Math.cos(theta) - a * e);
+          const posY = earthCenter.y + Math.sin(theta) * (4 + loopIndex * 1.8);
           const posZ = earthCenter.z + b * Math.sin(theta);
-          const posY = earthCenter.y + Math.sin(theta) * 6;
-
           probeGroupRef.current.position.set(posX, posY, posZ);
-          // Solar payload facing toward the Sun direction (+X)
-          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
-        } else if (phaseProgress < 0.67) {
-          // ==========================================
-          // PHASE 2: Trans-L1 Injection (TLI) Cruise
-          // ==========================================
-          const p = (phaseProgress - 0.33) / 0.34;
-          const t = p;
-          const x = earthCenter.x + t * (l1Point.x - earthCenter.x);
-          const y = earthCenter.y + Math.sin(t * Math.PI) * 20;
-          const z = earthCenter.z + t * (l1Point.z - earthCenter.z);
 
-          probeGroupRef.current.position.set(x, y, z);
-          // Solar instruments continuously pointed toward the Sun
+          const nextTheta = (loopFraction + 0.015) * Math.PI * 2;
+          const nextX = earthCenter.x + (a * Math.cos(nextTheta) - a * e);
+          const nextY = earthCenter.y + Math.sin(nextTheta) * (4 + loopIndex * 1.8);
+          const nextZ = earthCenter.z + b * Math.sin(nextTheta);
+          probeGroupRef.current.lookAt(nextX, nextY, nextZ);
+        } else if (phaseProgress < 0.80) {
+          // ==========================================
+          // PHASE 3: Heliocentric Hohmann Transfer (40% - 80%)
+          // ==========================================
+          const w = (phaseProgress - 0.40) / 0.40; // 0 to 1
+          const startX = earthCenter.x + 30.34;
+          const startZ = earthCenter.z;
+          const endX = marsRendezvous.x + 50;
+          const endZ = marsRendezvous.z;
+
+          const posX = startX + w * (endX - startX);
+          const posY = Math.sin(w * Math.PI) * 48;
+          const posZ = startZ + w * (endZ - startZ) - Math.sin(w * Math.PI) * 32;
+          probeGroupRef.current.position.set(posX, posY, posZ);
+
+          const wNext = Math.min(1.0, w + 0.015);
+          const nextX = startX + wNext * (endX - startX);
+          const nextY = Math.sin(wNext * Math.PI) * 48;
+          const nextZ = startZ + wNext * (endZ - startZ) - Math.sin(wNext * Math.PI) * 32;
+          probeGroupRef.current.lookAt(nextX, nextY, nextZ);
+        } else {
+          // ==========================================
+          // PHASE 4: Mars Capture Orbit (80% - 100%)
+          // ==========================================
+          const s = (phaseProgress - 0.80) / 0.20; // 0 to 1
+          const a = 71.0;
+          const c = 21.0;
+          const b = 67.82;
+          const tilt = 0.52;
+          const theta = s * Math.PI * 6; // 3 revolutions
+
+          const orbX = a * Math.cos(theta) - c;
+          const orbZ = b * Math.sin(theta);
+          const rotY = orbZ * Math.sin(tilt);
+          const rotZ = orbZ * Math.cos(tilt);
+
+          const curMars = marsGroupRef.current ? marsGroupRef.current.position : marsRendezvous;
+          probeGroupRef.current.position.set(
+            curMars.x + orbX,
+            curMars.y + rotY,
+            curMars.z + rotZ
+          );
+
+          // Attitude: Scientific camera instruments pointed strictly toward Mars center
+          probeGroupRef.current.lookAt(curMars.x, curMars.y, curMars.z);
+        }
+      } else if (isAditya) {
+        if (phaseProgress < 0.10) {
+          // ==========================================
+          // PHASE 1: Earth Launch Injection Arc (0% - 10%)
+          // ==========================================
+          const tau = phaseProgress / 0.10;
+          const p0X = earthCenter.x + 36;
+          const p0Y = earthCenter.y - 12;
+          const p0Z = earthCenter.z - 18;
+          const injX = earthCenter.x + 35.2;
+          const injY = earthCenter.y;
+          const injZ = earthCenter.z;
+
+          const posX = p0X + tau * (injX - p0X);
+          const posY = p0Y + Math.sin(tau * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tau * Math.PI) * 6;
+          const posZ = p0Z + tau * (injZ - p0Z);
+          probeGroupRef.current.position.set(posX, posY, posZ);
+          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
+        } else if (phaseProgress < 0.40) {
+          // ==========================================
+          // PHASE 2: Earth-bound Expanding Loops (10% - 40%)
+          // ==========================================
+          const u = (phaseProgress - 0.10) / 0.30;
+          const loopCount = 5;
+          const currentLoop = u * loopCount;
+          const loopFraction = currentLoop % 1.0;
+          const loopIndex = Math.min(4, Math.floor(currentLoop));
+
+          const a = 40 + loopIndex * 8.0; // 40 -> 72
+          const e = 0.12 + loopIndex * 0.11; // 0.12 -> 0.56
+          const b = a * Math.sqrt(Math.max(0.01, 1 - e * e));
+
+          const theta = loopFraction * Math.PI * 2;
+          const posX = earthCenter.x + (a * Math.cos(theta) - a * e);
+          const posY = earthCenter.y + Math.sin(theta) * 6;
+          const posZ = earthCenter.z + b * Math.sin(theta);
+          probeGroupRef.current.position.set(posX, posY, posZ);
+          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
+        } else if (phaseProgress < 0.80) {
+          // ==========================================
+          // PHASE 3: Trans-L1 Injection (TLI) Cruise (40% - 80%)
+          // ==========================================
+          const w = (phaseProgress - 0.40) / 0.40;
+          const startX = earthCenter.x + 31.68;
+          const startY = 0;
+          const startZ = earthCenter.z;
+          const endX = l1Point.x;
+          const endY = l1Point.y + 24;
+          const endZ = l1Point.z;
+
+          const posX = startX + w * (endX - startX);
+          const posY = startY + Math.sin(w * Math.PI) * 20 + w * (endY - startY);
+          const posZ = startZ + w * (endZ - startZ);
+          probeGroupRef.current.position.set(posX, posY, posZ);
           probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
         } else {
           // ==========================================
-          // PHASE 3: Sun-Earth L1 Halo Orbit (Lissajous)
+          // PHASE 4: Sun-Earth L1 Halo Orbit (80% - 100%)
           // ==========================================
-          const p = (phaseProgress - 0.67) / 0.33;
-          const theta = p * Math.PI * 4; // Multiple halo revolutions
+          const s = (phaseProgress - 0.80) / 0.20;
+          const theta = s * Math.PI * 4;
 
-          // Halo orbit: Oscillates primarily in Y-Z plane perpendicular to Sun-Earth line
           const haloX = l1Point.x + Math.sin(theta * 2) * 5.5;
           const haloY = l1Point.y + Math.cos(theta) * 24;
           const haloZ = l1Point.z + Math.sin(theta) * 30;
 
           probeGroupRef.current.position.set(haloX, haloY, haloZ);
-          // Primary payload apertures (VELC, SUIT) strictly point toward the Sun (+X)
           probeGroupRef.current.lookAt(sunCenter);
         }
       }
@@ -206,15 +244,44 @@ export function DeepSpaceScene({
   });
 
   // ========================================================
-  // TRAJECTORY CURVES MEMOIZATION
+  // TRAJECTORY CURVES MEMOIZATION (C0-Continuous Path Stitching)
   // ========================================================
 
-  // 1. MOM Earth-bound Phasing Loops (Apogee Raising Maneuvers 1 to 6)
+  // 1. MOM Earth Launch-to-Parking Injection Arc (0% - 10%)
+  const momEntryArc = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const p0X = earthCenter.x + 36;
+    const p0Y = earthCenter.y - 12;
+    const p0Z = earthCenter.z - 18;
+    const injX = earthCenter.x + 35.7;
+    const injY = earthCenter.y;
+    const injZ = earthCenter.z;
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      const x = p0X + t * (injX - p0X);
+      const y = p0Y + Math.sin(t * Math.PI * 0.5) * (injY - p0Y) + Math.sin(t * Math.PI) * 6;
+      const z = p0Z + t * (injZ - p0Z);
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineDashedMaterial({
+      color: 0x38bdf8,
+      dashSize: 3,
+      gapSize: 2,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const line = new THREE.Line(geom, mat);
+    line.computeLineDistances();
+    return line;
+  }, [earthCenter]);
+
+  // 2. MOM Earth-bound Phasing Loops (Apogee Raising Maneuvers 1 to 5)
   const momPhasingLoops = useMemo(() => {
     const lines: THREE.Line[] = [];
-    for (let loop = 0; loop < 6; loop++) {
-      const a = 42 + loop * 8.5;
-      const e = 0.15 + loop * 0.11;
+    for (let loop = 0; loop < 5; loop++) {
+      const a = 42 + loop * 10.0;
+      const e = 0.15 + loop * 0.12;
       const b = a * Math.sqrt(Math.max(0.01, 1 - e * e));
       const pts: THREE.Vector3[] = [];
       for (let i = 0; i <= 64; i++) {
@@ -222,30 +289,34 @@ export function DeepSpaceScene({
         pts.push(
           new THREE.Vector3(
             earthCenter.x + (a * Math.cos(theta) - a * e),
-            earthCenter.y + Math.sin(theta) * (4 + loop * 1.5),
+            earthCenter.y + Math.sin(theta) * (4 + loop * 1.8),
             earthCenter.z + b * Math.sin(theta)
           )
         );
       }
       const geom = new THREE.BufferGeometry().setFromPoints(pts);
       const mat = new THREE.LineBasicMaterial({
-        color: loop === 5 ? 0xf59e0b : 0x0284c7,
+        color: loop === 4 ? 0xf59e0b : 0x0284c7,
         transparent: true,
-        opacity: 0.35 + loop * 0.1,
+        opacity: 0.35 + loop * 0.12,
       });
       lines.push(new THREE.Line(geom, mat));
     }
     return lines;
   }, [earthCenter]);
 
-  // 2. MOM Hohmann Transfer Ellipse Arc
+  // 3. MOM Hohmann Transfer Ellipse Arc (40% - 80%)
   const momTransferCurve = useMemo(() => {
     const pts: THREE.Vector3[] = [];
+    const startX = earthCenter.x + 30.34;
+    const startZ = earthCenter.z;
+    const endX = marsRendezvous.x + 50;
+    const endZ = marsRendezvous.z;
     for (let i = 0; i <= 80; i++) {
       const t = i / 80;
-      const x = earthCenter.x + t * (marsRendezvous.x - earthCenter.x);
+      const x = startX + t * (endX - startX);
       const y = Math.sin(t * Math.PI) * 48;
-      const z = earthCenter.z + t * (marsRendezvous.z - earthCenter.z) - Math.sin(t * Math.PI) * 28;
+      const z = startZ + t * (endZ - startZ) - Math.sin(t * Math.PI) * 32;
       pts.push(new THREE.Vector3(x, y, z));
     }
     const geom = new THREE.BufferGeometry().setFromPoints(pts);
@@ -261,7 +332,7 @@ export function DeepSpaceScene({
     return line;
   }, [earthCenter, marsRendezvous]);
 
-  // 3. Mars Orbital Heliocentric Arc
+  // 4. Mars Orbital Heliocentric Arc
   const marsHeliocentricArc = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     for (let i = -30; i <= 30; i++) {
@@ -282,25 +353,20 @@ export function DeepSpaceScene({
     return line;
   }, []);
 
-  // 4. Mars Capture Elliptical Orbit (421 km x 76,993 km)
+  // 5. Mars Capture Elliptical Orbit (Attached to Mars Center with Strict Clearance > 1.55x Mars Radius)
   const marsCaptureOrbit = useMemo(() => {
     const pts: THREE.Vector3[] = [];
-    const a = 46;
-    const b = 22;
-    const tilt = 0.55;
-    for (let i = 0; i <= 64; i++) {
-      const theta = (i / 64) * Math.PI * 2;
-      const orbX = a * Math.cos(theta);
+    const a = 71.0;
+    const c = 21.0;
+    const b = 67.82;
+    const tilt = 0.52;
+    for (let i = 0; i <= 80; i++) {
+      const theta = (i / 80) * Math.PI * 2;
+      const orbX = a * Math.cos(theta) - c;
       const orbZ = b * Math.sin(theta);
       const rotY = orbZ * Math.sin(tilt);
       const rotZ = orbZ * Math.cos(tilt);
-      pts.push(
-        new THREE.Vector3(
-          marsRendezvous.x + orbX,
-          marsRendezvous.y + rotY,
-          marsRendezvous.z + rotZ
-        )
-      );
+      pts.push(new THREE.Vector3(orbX, rotY, rotZ));
     }
     const geom = new THREE.BufferGeometry().setFromPoints(pts);
     const mat = new THREE.LineBasicMaterial({
@@ -309,14 +375,43 @@ export function DeepSpaceScene({
       opacity: 0.85,
     });
     return new THREE.Line(geom, mat);
-  }, [marsRendezvous]);
+  }, []);
 
-  // 5. Aditya-L1 Earth-bound Loops
+  // 6. Aditya-L1 Earth Launch Injection Arc (0% - 10%)
+  const adityaEntryArc = useMemo(() => {
+    const pts: THREE.Vector3[] = [];
+    const p0X = earthCenter.x + 36;
+    const p0Y = earthCenter.y - 12;
+    const p0Z = earthCenter.z - 18;
+    const injX = earthCenter.x + 35.2;
+    const injY = earthCenter.y;
+    const injZ = earthCenter.z;
+    for (let i = 0; i <= 40; i++) {
+      const t = i / 40;
+      const x = p0X + t * (injX - p0X);
+      const y = p0Y + Math.sin(t * Math.PI * 0.5) * (injY - p0Y) + Math.sin(t * Math.PI) * 6;
+      const z = p0Z + t * (injZ - p0Z);
+      pts.push(new THREE.Vector3(x, y, z));
+    }
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineDashedMaterial({
+      color: 0x38bdf8,
+      dashSize: 3,
+      gapSize: 2,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const line = new THREE.Line(geom, mat);
+    line.computeLineDistances();
+    return line;
+  }, [earthCenter]);
+
+  // 7. Aditya-L1 Earth-bound Loops (10% - 40%)
   const adityaPhasingLoops = useMemo(() => {
     const lines: THREE.Line[] = [];
     for (let loop = 0; loop < 5; loop++) {
-      const a = 40 + loop * 7.5;
-      const e = 0.12 + loop * 0.12;
+      const a = 40 + loop * 8.0;
+      const e = 0.12 + loop * 0.11;
       const b = a * Math.sqrt(Math.max(0.01, 1 - e * e));
       const pts: THREE.Vector3[] = [];
       for (let i = 0; i <= 64; i++) {
@@ -340,14 +435,20 @@ export function DeepSpaceScene({
     return lines;
   }, [earthCenter]);
 
-  // 6. Aditya-L1 Trans-L1 Injection (TLI) Trajectory Line
+  // 8. Aditya-L1 Trans-L1 Injection (TLI) Trajectory Line (40% - 80%)
   const adityaTliCurve = useMemo(() => {
     const pts: THREE.Vector3[] = [];
+    const startX = earthCenter.x + 31.68;
+    const startY = 0;
+    const startZ = earthCenter.z;
+    const endX = l1Point.x;
+    const endY = l1Point.y + 24;
+    const endZ = l1Point.z;
     for (let i = 0; i <= 60; i++) {
       const t = i / 60;
-      const x = earthCenter.x + t * (l1Point.x - earthCenter.x);
-      const y = earthCenter.y + Math.sin(t * Math.PI) * 20;
-      const z = earthCenter.z + t * (l1Point.z - earthCenter.z);
+      const x = startX + t * (endX - startX);
+      const y = startY + Math.sin(t * Math.PI) * 20 + t * (endY - startY);
+      const z = startZ + t * (endZ - startZ);
       pts.push(new THREE.Vector3(x, y, z));
     }
     const geom = new THREE.BufferGeometry().setFromPoints(pts);
@@ -363,7 +464,7 @@ export function DeepSpaceScene({
     return line;
   }, [earthCenter, l1Point]);
 
-  // 7. Aditya-L1 3D Inclined Halo Orbit Loop around L1
+  // 9. Aditya-L1 3D Inclined Halo Orbit Loop around L1 (80% - 100%)
   const l1HaloCurve = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     for (let i = 0; i <= 72; i++) {
@@ -389,9 +490,12 @@ export function DeepSpaceScene({
   useEffect(() => {
     return () => {
       sunMaterial.dispose();
+      sunCoronaMaterial.dispose();
       marsTextures.map.dispose();
       marsTextures.bumpMap.dispose();
       marsTextures.roughnessMap.dispose();
+      momEntryArc.geometry.dispose();
+      (momEntryArc.material as THREE.Material).dispose();
       momPhasingLoops.forEach((l) => {
         l.geometry.dispose();
         (l.material as THREE.Material).dispose();
@@ -402,6 +506,8 @@ export function DeepSpaceScene({
       (marsHeliocentricArc.material as THREE.Material).dispose();
       marsCaptureOrbit.geometry.dispose();
       (marsCaptureOrbit.material as THREE.Material).dispose();
+      adityaEntryArc.geometry.dispose();
+      (adityaEntryArc.material as THREE.Material).dispose();
       adityaPhasingLoops.forEach((l) => {
         l.geometry.dispose();
         (l.material as THREE.Material).dispose();
@@ -413,11 +519,14 @@ export function DeepSpaceScene({
     };
   }, [
     sunMaterial,
+    sunCoronaMaterial,
     marsTextures,
+    momEntryArc,
     momPhasingLoops,
     momTransferCurve,
     marsHeliocentricArc,
     marsCaptureOrbit,
+    adityaEntryArc,
     adityaPhasingLoops,
     adityaTliCurve,
     l1HaloCurve,
@@ -437,19 +546,19 @@ export function DeepSpaceScene({
       {/* ======================================================== */}
       {isMOM ? (
         <group>
-          {/* Phase 1: Expanding Earth-bound Apogee Raising Maneuver Loops */}
+          {/* Phase 1: Earth Launch-to-Parking Injection Arc */}
+          <primitive object={momEntryArc} />
+
+          {/* Phase 2: Expanding Earth-bound Apogee Raising Maneuver Loops */}
           {momPhasingLoops.map((line, idx) => (
             <primitive key={`mom-loop-${idx}`} object={line} />
           ))}
 
-          {/* Phase 2: Hohmann Trans-Mars Injection Transfer Arc */}
+          {/* Phase 3: Hohmann Trans-Mars Injection Transfer Arc */}
           <primitive object={momTransferCurve} />
 
           {/* Mars Heliocentric Orbital Segment */}
           <primitive object={marsHeliocentricArc} />
-
-          {/* Phase 3: Mars Capture Elliptical Orbit (421 km x 76,993 km) */}
-          <primitive object={marsCaptureOrbit} />
 
           {/* 3D MARS GLOBE (Moving along heliocentric orbit to rendezvous at 100%) */}
           <group ref={marsGroupRef} position={[marsRendezvous.x, marsRendezvous.y, marsRendezvous.z]}>
@@ -479,6 +588,9 @@ export function DeepSpaceScene({
               />
             </mesh>
 
+            {/* Phase 4: Mars Capture Elliptical Orbit (Attached to Mars Center with Strict Clearance > 1.55x Mars Radius) */}
+            <primitive object={marsCaptureOrbit} />
+
             {/* Mars Ambient Point Light */}
             <pointLight color="#ea580c" intensity={1.5} distance={75} />
           </group>
@@ -499,52 +611,34 @@ export function DeepSpaceScene({
       {/* ======================================================== */}
       {isAditya ? (
         <group>
-          {/* Phase 1: Earth-bound Expanding Orbit Loops */}
+          {/* Phase 1: Earth Launch-to-Parking Injection Arc */}
+          <primitive object={adityaEntryArc} />
+
+          {/* Phase 2: Earth-bound Expanding Orbit Loops */}
           {adityaPhasingLoops.map((line, idx) => (
             <primitive key={`aditya-loop-${idx}`} object={line} />
           ))}
 
-          {/* Phase 2: Trans-L1 Injection (TLI) Trajectory */}
+          {/* Phase 3: Trans-L1 Injection (TLI) Trajectory */}
           <primitive object={adityaTliCurve} />
 
-          {/* Phase 3: 3D Inclined Halo Orbit Loop around L1 */}
+          {/* Phase 4: 3D Inclined Halo Orbit Loop around L1 */}
           <primitive object={l1HaloCurve} />
 
-          {/* GLSL ANIMATED SUN PHOTOSPHERE & CORONA AT [260, 0, 0] */}
+          {/* GLSL ANIMATED SUN PHOTOSPHERE & CORONA */}
           <group position={[sunCenter.x, sunCenter.y, sunCenter.z]}>
             {/* Real-time GLSL Sun Sphere with 3D FBM Plasma Convection */}
             <mesh ref={sunMeshRef} material={sunMaterial}>
-              <sphereGeometry args={[55, 64, 48]} />
+              <sphereGeometry args={[52, 64, 48]} />
             </mesh>
 
-            {/* Volumetric Corona Glow Envelope */}
-            <mesh ref={coronaRef}>
-              <sphereGeometry args={[75, 48, 36]} />
-              <meshBasicMaterial
-                color="#fde047"
-                transparent
-                opacity={0.38}
-                blending={THREE.AdditiveBlending}
-                side={THREE.BackSide}
-                depthWrite={false}
-              />
-            </mesh>
-
-            {/* Outer Radiant Flare Shell */}
-            <mesh>
-              <sphereGeometry args={[98, 32, 24]} />
-              <meshBasicMaterial
-                color="#f97316"
-                transparent
-                opacity={0.2}
-                blending={THREE.AdditiveBlending}
-                side={THREE.BackSide}
-                depthWrite={false}
-              />
+            {/* Custom GLSL Smooth Additive Corona Shader (Zero Hard Edges) */}
+            <mesh ref={coronaRef} material={sunCoronaMaterial}>
+              <sphereGeometry args={[82, 48, 36]} />
             </mesh>
 
             {/* Dynamic Sun Omni-Light */}
-            <pointLight color="#fef08a" intensity={4.8} distance={700} decay={1.4} />
+            <pointLight color="#fef08a" intensity={4.8} distance={800} decay={1.4} />
           </group>
 
           {/* SUN-EARTH L1 LAGRANGE POINT RETICULE & CALLOUT */}

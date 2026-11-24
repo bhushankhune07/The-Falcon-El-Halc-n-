@@ -5,6 +5,7 @@ import { SimFrameState } from './types';
 import { ScaledEarth } from './ScaledEarth';
 import { DeepSpaceScene } from './DeepSpaceScene';
 import { EOS04Spacecraft } from './ProceduralSpacecraft';
+import { RealisticPS4Stage } from './ProceduralPSLV';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from './inspectData';
 import { MissionConfig } from '../../sim';
 
@@ -109,6 +110,8 @@ export function OrbitScene({
 }: Props) {
   const satelliteGroupRef = useRef<THREE.Group>(null);
   const ps4GroupRef = useRef<THREE.Group>(null);
+  const deorbitPlumesRef = useRef<THREE.Group>(null);
+  const reentryGlowRef = useRef<THREE.Group>(null);
   const radarConeRef = useRef<THREE.Mesh>(null);
   const swathStripRef = useRef<THREE.Line>(null);
 
@@ -197,7 +200,7 @@ export function OrbitScene({
   useFrame((_, delta) => {
     if (deepSpaceActive) return;
 
-    // 1. Continuous smooth orbital revolution around Earth
+    // 1. Continuous smooth orbital revolution around Earth with dynamic ascent-to-orbit radius
     const baseProgress = Math.min(1.0, Math.max(0.0, (simFrame.time_s - 120) / 910.0));
     if (simFrame.ps4Cutoff || simFrame.time_s >= 1020) {
       continuousOrbitAngleRef.current += delta * 0.08;
@@ -206,10 +209,16 @@ export function OrbitScene({
     }
     const orbitAngle = 0.35 + baseProgress * 1.8 + continuousOrbitAngleRef.current;
 
+    // Smooth upward insertion curve from 120 km injection up to final orbit radius
+    const altFrac = Math.min(1.0, Math.max(0.0, (simFrame.altitude_m - 120000) / 414000));
+    const currentOrbitRadius = simFrame.ps4Cutoff
+      ? targetOrbitRadius
+      : earthRadius * (1.18 + altFrac * 0.14);
+
     // Spacecraft Orbital Position
-    const satX = orbitRadius * Math.sin(orbitAngle);
-    const satY = orbitRadius * Math.cos(orbitAngle) * Math.cos(incRad);
-    const satZ = orbitRadius * Math.cos(orbitAngle) * Math.sin(incRad);
+    const satX = currentOrbitRadius * Math.sin(orbitAngle);
+    const satY = currentOrbitRadius * Math.cos(orbitAngle) * Math.cos(incRad);
+    const satZ = currentOrbitRadius * Math.cos(orbitAngle) * Math.sin(incRad);
 
     // 2. Orbital Local-Vertical / Local-Horizontal (LVLH) Attitude Frame
     // Zenith (+Y_body): radially outward away from Earth center (0,0,0)
@@ -222,9 +231,9 @@ export function OrbitScene({
       zenithVecRef.current.set(satX, satY, satZ).normalize();
 
       // Velocity tangent: d/d(theta) of orbit position
-      const vx = orbitRadius * Math.cos(orbitAngle);
-      const vy = -orbitRadius * Math.sin(orbitAngle) * Math.cos(incRad);
-      const vz = -orbitRadius * Math.sin(orbitAngle) * Math.sin(incRad);
+      const vx = currentOrbitRadius * Math.cos(orbitAngle);
+      const vy = -currentOrbitRadius * Math.sin(orbitAngle) * Math.cos(incRad);
+      const vz = -currentOrbitRadius * Math.sin(orbitAngle) * Math.sin(incRad);
       alongTrackVecRef.current.set(vx, vy, vz).normalize();
 
       // X = Y × Z
@@ -246,22 +255,68 @@ export function OrbitScene({
       satelliteGroupRef.current.quaternion.setFromRotationMatrix(basisMatrixRef.current);
     }
 
-    // 3. PS4 Upper Stage separation drift (backward along -alongTrack)
+    // 3. PS4 Upper Stage: Separation, Retrograde De-orbit Burn & Atmospheric Re-entry Burn-up
     if (ps4GroupRef.current) {
-      const targetPs4Z = simFrame.ps4Cutoff ? -1.2 - Math.min(32.0, dtCutoff * 4.8) : -1.2;
-      const targetPs4Y = simFrame.ps4Cutoff ? -Math.min(8.0, dtCutoff * 0.9) : 0;
-      ps4GroupRef.current.position.z = THREE.MathUtils.damp(
-        ps4GroupRef.current.position.z,
-        targetPs4Z,
-        4.0,
-        delta
-      );
-      ps4GroupRef.current.position.y = THREE.MathUtils.damp(
-        ps4GroupRef.current.position.y,
-        targetPs4Y,
-        4.0,
-        delta
-      );
+      const cTime = commissioningTime ?? 0;
+
+      if (!simFrame.ps4Cutoff || cTime <= 0) {
+        ps4GroupRef.current.position.set(0, 0, -1.2);
+        ps4GroupRef.current.rotation.set(0, 0, 0);
+        ps4GroupRef.current.scale.setScalar(1.0);
+        ps4GroupRef.current.visible = true;
+        if (deorbitPlumesRef.current) deorbitPlumesRef.current.visible = false;
+        if (reentryGlowRef.current) reentryGlowRef.current.visible = false;
+      } else if (cTime < 2.5) {
+        // Phase 1: Separation drift & retrograde pitch (0s - 2.5s)
+        const tSep = cTime / 2.5;
+        ps4GroupRef.current.position.z = -1.2 - tSep * 12.0;
+        ps4GroupRef.current.position.y = -tSep * 1.5;
+        ps4GroupRef.current.rotation.x = tSep * Math.PI; // pitch retrograde
+        ps4GroupRef.current.scale.setScalar(1.0);
+        ps4GroupRef.current.visible = true;
+        if (deorbitPlumesRef.current) deorbitPlumesRef.current.visible = false;
+        if (reentryGlowRef.current) reentryGlowRef.current.visible = false;
+      } else if (cTime < 5.0) {
+        // Phase 2: Retrograde de-orbit burn (2.5s - 5.0s)
+        const tBurn = (cTime - 2.5) / 2.5;
+        ps4GroupRef.current.position.z = -13.2 - tBurn * 18.0;
+        ps4GroupRef.current.position.y = -1.5 - Math.pow(tBurn, 1.4) * 20.0; // curving downward toward atmosphere
+        ps4GroupRef.current.rotation.x = Math.PI + Math.sin(tBurn * Math.PI * 4) * 0.05;
+        ps4GroupRef.current.scale.setScalar(1.0);
+        ps4GroupRef.current.visible = true;
+        if (deorbitPlumesRef.current) deorbitPlumesRef.current.visible = true;
+        if (reentryGlowRef.current) reentryGlowRef.current.visible = false;
+      } else if (cTime < 8.5) {
+        // Phase 3: Atmospheric entry, tumbling & fiery burn-up (5.0s - 8.5s)
+        const tReentry = (cTime - 5.0) / 3.5;
+        ps4GroupRef.current.position.z = -31.2 - tReentry * 24.0;
+        ps4GroupRef.current.position.y = -21.5 - tReentry * 26.0; // deep into upper atmosphere
+        // Chaotic tumbling
+        ps4GroupRef.current.rotation.x += delta * 4.2;
+        ps4GroupRef.current.rotation.y += delta * 3.6;
+        ps4GroupRef.current.rotation.z += delta * 5.0;
+        // Shrink & burn-up
+        const scaleVal = Math.max(0, 1.0 - Math.max(0, (cTime - 6.8) / 1.7));
+        ps4GroupRef.current.scale.setScalar(scaleVal);
+        ps4GroupRef.current.visible = scaleVal > 0.005;
+        if (deorbitPlumesRef.current) deorbitPlumesRef.current.visible = false;
+        if (reentryGlowRef.current) {
+          reentryGlowRef.current.visible = scaleVal > 0.005;
+          if (reentryGlowRef.current.children[0]) {
+            const glowMesh = reentryGlowRef.current.children[0] as THREE.Mesh;
+            glowMesh.scale.setScalar(1.0 + Math.sin(cTime * 12.0) * 0.15);
+            if (glowMesh.material && 'opacity' in glowMesh.material) {
+              (glowMesh.material as THREE.MeshBasicMaterial).opacity = 0.5 + 0.3 * Math.sin(cTime * 18.0);
+            }
+          }
+        }
+      } else {
+        // Phase 4: Stage completely vaporized & removed from orbit (> 8.5s)
+        ps4GroupRef.current.visible = false;
+        ps4GroupRef.current.scale.setScalar(0);
+        if (deorbitPlumesRef.current) deorbitPlumesRef.current.visible = false;
+        if (reentryGlowRef.current) reentryGlowRef.current.visible = false;
+      }
     }
 
     // 4. C-band SAR Radar Beam Sweeping Ground Track
@@ -325,7 +380,7 @@ export function OrbitScene({
 
           {/* Spacecraft + PS4 Upper Stage in Orbit */}
           <group ref={satelliteGroupRef}>
-            {/* PS4 Spent Upper Stage (Drifts backward on separation) */}
+            {/* PS4 Spent Upper Stage with De-orbit Burn & Atmospheric Re-entry */}
             <group
               ref={ps4GroupRef}
               position={[0, 0, -1.2]}
@@ -347,21 +402,73 @@ export function OrbitScene({
                 if (onHoverComponent) onHoverComponent(null);
               }}
             >
-              <mesh>
-                <cylinderGeometry args={[0.5, 0.5, 1.4, 16]} />
-                {blueprintMode ? (
-                  <meshStandardMaterial
-                    wireframe
-                    color="#00f0ff"
-                    emissive="#00f0ff"
-                    emissiveIntensity={0.5}
+              <RealisticPS4Stage
+                blueprintMode={blueprintMode}
+                scale={0.52}
+              />
+
+              {/* Twin De-orbit Retrograde Thruster Plumes */}
+              <group ref={deorbitPlumesRef} visible={false} position={[0, -0.38, 0]}>
+                <mesh position={[-0.19, -0.45, 0]} rotation={[Math.PI, 0, 0]}>
+                  <coneGeometry args={[0.13, 0.85, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#38bdf8"
+                    transparent
+                    opacity={0.85}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh position={[0.19, -0.45, 0]} rotation={[Math.PI, 0, 0]}>
+                  <coneGeometry args={[0.13, 0.85, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#38bdf8"
+                    transparent
+                    opacity={0.85}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+              </group>
+
+              {/* Fiery Atmospheric Re-entry Plasma Sheath & Trail */}
+              <group ref={reentryGlowRef} visible={false}>
+                <mesh>
+                  <sphereGeometry args={[1.0, 20, 16]} />
+                  <meshBasicMaterial
+                    color="#ef4444"
+                    transparent
+                    opacity={0.7}
+                    blending={THREE.AdditiveBlending}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh>
+                  <sphereGeometry args={[0.8, 16, 14]} />
+                  <meshBasicMaterial
+                    color="#fbbf24"
                     transparent
                     opacity={0.8}
+                    blending={THREE.AdditiveBlending}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
                   />
-                ) : (
-                  <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.35} />
-                )}
-              </mesh>
+                </mesh>
+                <mesh position={[0, 1.2, 0]}>
+                  <coneGeometry args={[0.85, 2.5, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#f97316"
+                    transparent
+                    opacity={0.65}
+                    blending={THREE.AdditiveBlending}
+                    side={THREE.DoubleSide}
+                    depthWrite={false}
+                  />
+                </mesh>
+              </group>
             </group>
 
             {/* High-Fidelity EOS-04 Spacecraft in LVLH Nadir Alignment */}

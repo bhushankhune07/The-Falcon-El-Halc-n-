@@ -49,14 +49,14 @@ function CameraManager({
       prevRef.current = { mode: cameraMode, high: isHigh, ds: deepSpaceActive };
 
       if (deepSpaceActive) {
-        // Deep Space Camera Framing
+        // Deep Space Camera Framing: Elevated 3/4 oblique angle
         if (missionId === 'pslv-c25-mom') {
-          camera.position.set(110, 100, 240);
-          camera.lookAt(100, 0, -20);
+          camera.position.set(100, 140, 290);
+          camera.lookAt(115, 0, -25);
         } else {
-          // Aditya-L1 Sun-L1 transfer framing
-          camera.position.set(130, 80, 210);
-          camera.lookAt(140, 0, 0);
+          // Aditya-L1 Sun-L1 transfer framing: Elevated 3/4 oblique view
+          camera.position.set(110, 135, 280);
+          camera.lookAt(130, 0, 10);
         }
       } else if (cameraMode === 'orbit') {
         if (isHigh) {
@@ -137,8 +137,8 @@ export function MissionCanvas({
 
   const orbitControlsTarget: [number, number, number] = deepSpaceActive
     ? mission?.id === 'pslv-c25-mom'
-      ? [100, 0, -20]
-      : [140, 0, 0]
+      ? [115, 0, -25]
+      : [130, 0, 10]
     : isHigh
     ? [0, 0, 0]
     : [0, 43, 0];
@@ -154,7 +154,7 @@ export function MissionCanvas({
           }}
           camera={{
             position: deepSpaceActive
-              ? [110, 100, 240]
+              ? [100, 140, 290]
               : cameraMode === 'orbit'
               ? isHigh
                 ? [0, 75, 140]
