@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SimulationEngine, PRESET_MISSIONS } from './index';
 
-describe('BharatLaunch 3D: RK4 Planar Ascent Physics Engine', () => {
+describe('Urdhva: RK4 Planar Ascent Physics Engine', () => {
   const pslvC52 = PRESET_MISSIONS['pslv-c52-eos04'];
   const pslvC25 = PRESET_MISSIONS['pslv-c25-mom'];
   const pslvC57 = PRESET_MISSIONS['pslv-c57-aditya-l1'];

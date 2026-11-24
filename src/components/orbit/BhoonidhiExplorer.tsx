@@ -768,22 +768,23 @@ export function BhoonidhiExplorer({
                   <button
                     onClick={() => setMapLayer('osm')}
                     className={`px-2 py-0.5 rounded ${mapLayer === 'osm' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400'}`}
+                    title="Standard Map (80% opacity)"
                   >
-                    OSM
+                    Standard Map
                   </button>
                   <button
                     onClick={() => setMapLayer('bhuvan_info')}
                     className={`px-2 py-0.5 rounded ${mapLayer === 'bhuvan_info' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400'}`}
-                    title="NRSC Bhuvan reference overlay layer"
+                    title="Swath Focus (Dimmed Base) — dims basemap to emphasize SAR footprint"
                   >
-                    Bhuvan Ref
+                    Swath Focus (Dimmed Base)
                   </button>
                 </div>
               </div>
 
               {mapLayer === 'bhuvan_info' ? (
                 <div className="p-2 rounded bg-sky-950/40 border border-sky-800/60 text-[10px] font-mono text-sky-200">
-                  Bhuvan Reference: Aligned to Indian national GIS cadastral &amp; river basin reference boundaries.
+                  Swath Focus: Basemap dimmed to 60% opacity to highlight C-band SAR ground track and footprint boundaries.
                 </div>
               ) : null}
             </div>

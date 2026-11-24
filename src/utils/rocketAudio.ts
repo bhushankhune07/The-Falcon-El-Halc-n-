@@ -9,6 +9,8 @@ export interface RocketAudioManager {
   setEnabled: (enabled: boolean) => void;
   toggle: () => boolean;
   update: (thrust_N: number, altitude_m: number, isPlaying: boolean) => void;
+  suspend: () => void;
+  resume: () => void;
   dispose: () => void;
 }
 
@@ -116,6 +118,22 @@ export function createRocketAudio(): RocketAudioManager {
       // Volume: audible only when atmosphere present
       const targetVol = throttle * densityAttenuation * 0.35;
       gainNode.gain.setTargetAtTime(targetVol, ctx.currentTime, 0.06);
+    },
+
+    suspend: () => {
+      if (gainNode && ctx) {
+        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      }
+      if (ctx && ctx.state === 'running') {
+        ctx.suspend().catch(() => {});
+      }
+    },
+
+    resume: () => {
+      if (!isAudioEnabled) return;
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
     },
 
     dispose: () => {

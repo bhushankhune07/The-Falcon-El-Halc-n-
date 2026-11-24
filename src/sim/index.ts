@@ -1,5 +1,5 @@
 /**
- * BharatLaunch 3D Physics & Simulation Module
+ * Urdhva Physics & Simulation Module
  * Strictly decoupled from React / Three.js
  */
 

@@ -1,5 +1,5 @@
 /**
- * BharatLaunch 3D: Mission, Physics & Telemetry Types
+ * Urdhva: Mission, Physics & Telemetry Types
  * Strictly decoupled from React / Three.js. 100% SI Units.
  */
 

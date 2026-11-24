@@ -58,10 +58,20 @@ export default function App() {
   const animRef = useRef<number | null>(null);
   const lastTimestampRef = useRef<number | null>(null);
 
-  // Playback animation loop
+  // Playback animation loop - runs RAF only while playing (Item M3)
   useEffect(() => {
+    if (!isPlaying) {
+      lastTimestampRef.current = null;
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = null;
+      }
+      return;
+    }
+
+    lastTimestampRef.current = null;
     const loop = (timestamp: number) => {
-      if (lastTimestampRef.current !== null && isPlaying) {
+      if (lastTimestampRef.current !== null) {
         const dt_s = (timestamp - lastTimestampRef.current) / 1000.0;
         setCurrentTime_s((prev) => {
           const next = prev + dt_s * timeWarp;
@@ -78,7 +88,10 @@ export default function App() {
 
     animRef.current = requestAnimationFrame(loop);
     return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = null;
+      }
     };
   }, [isPlaying, timeWarp, maxTime_s]);
 
@@ -114,6 +127,55 @@ export default function App() {
     return deriveSimFrameState(currentState, mission);
   }, [currentState, mission]);
 
+  // Persisted post-cutoff commissioning timer (0 -> 10s) across all screen switches (Items H4 & M2)
+  const [commissioningTime, setCommissioningTime] = useState<number>(0);
+  const commAnimRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!simFrame.ps4Cutoff) {
+      setCommissioningTime(0);
+      if (commAnimRef.current) {
+        cancelAnimationFrame(commAnimRef.current);
+        commAnimRef.current = null;
+      }
+      return;
+    }
+
+    if (commissioningTime >= 10.0) {
+      if (commAnimRef.current) {
+        cancelAnimationFrame(commAnimRef.current);
+        commAnimRef.current = null;
+      }
+      return;
+    }
+
+    let last = performance.now();
+    const tick = (now: number) => {
+      const delta = (now - last) / 1000.0;
+      last = now;
+      setCommissioningTime((prev) => {
+        const next = prev + delta;
+        if (next >= 10.0) {
+          if (commAnimRef.current) {
+            cancelAnimationFrame(commAnimRef.current);
+            commAnimRef.current = null;
+          }
+          return 10.0;
+        }
+        commAnimRef.current = requestAnimationFrame(tick);
+        return next;
+      });
+    };
+
+    commAnimRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (commAnimRef.current) {
+        cancelAnimationFrame(commAnimRef.current);
+        commAnimRef.current = null;
+      }
+    };
+  }, [simFrame.ps4Cutoff, mission.id]);
+
   // Memoize ProvenanceModal onClose (Item D13)
   const handleCloseProvenance = useCallback(() => {
     setIsProvenanceOpen(false);
@@ -126,6 +188,7 @@ export default function App() {
     setIsPlaying(true);
     setCameraMode('auto');
     setIsDeepSpaceActive(false);
+    setCommissioningTime(0);
     setActiveScreen('launch');
   };
 
@@ -147,6 +210,7 @@ export default function App() {
     setCurrentTime_s(0);
     setTimeWarp(1);
     setCameraMode('auto');
+    setCommissioningTime(0);
     setActiveScreen('launch');
 
     if (isAlreadyNominal) {
@@ -274,6 +338,7 @@ export default function App() {
               setIsPlaying(false);
               setCameraMode('auto');
               setIsDeepSpaceActive(false);
+              setCommissioningTime(0);
             }}
             modifiers={challengeModifiers}
             onUpdateModifiers={setChallengeModifiers}
@@ -299,6 +364,7 @@ export default function App() {
             onSkipToOrbit={() => setActiveScreen('orbit')}
             deepSpaceActive={isDeepSpaceActive}
             onToggleDeepSpace={setIsDeepSpaceActive}
+            commissioningTime={commissioningTime}
           />
         )}
 

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { PRESET_MISSIONS } from '../../sim';
+import { SceneErrorBoundary } from '../scene/ErrorBoundary';
 import { SimFrameState } from '../scene/types';
 import { ProceduralPSLV } from '../scene/ProceduralPSLV';
 import { ScaledEarth } from '../scene/ScaledEarth';
@@ -454,53 +455,55 @@ export function ModelBriefingView() {
 
         {/* 3D WebGL Canvas */}
         <div className="flex-1 w-full h-full relative">
-          <Canvas
-            gl={{
-              antialias: true,
-              logarithmicDepthBuffer: true,
-              powerPreference: 'high-performance',
-            }}
-            camera={{ position: [0, 6, 32], fov: 46, near: 0.1, far: 50000 }}
-          >
-            {/* Bright Studio 3-Point + Hemisphere Lighting */}
-            <ambientLight intensity={1.1} />
-            <hemisphereLight args={['#ffffff', '#cbd5e1', 1.0]} />
-            <directionalLight position={[25, 40, 30]} intensity={2.2} castShadow />
-            <directionalLight position={[-25, 20, -20]} intensity={1.4} />
-            <directionalLight position={[0, -10, 20]} intensity={0.6} />
+          <SceneErrorBoundary>
+            <Canvas
+              gl={{
+                antialias: true,
+                logarithmicDepthBuffer: true,
+                powerPreference: 'high-performance',
+              }}
+              camera={{ position: [0, 6, 32], fov: 46, near: 0.1, far: 50000 }}
+            >
+              {/* Bright Studio 3-Point + Hemisphere Lighting */}
+              <ambientLight intensity={1.1} />
+              <hemisphereLight args={['#ffffff', '#cbd5e1', 1.0]} />
+              <directionalLight position={[25, 40, 30]} intensity={2.2} castShadow />
+              <directionalLight position={[-25, 20, -20]} intensity={1.4} />
+              <directionalLight position={[0, -10, 20]} intensity={0.6} />
 
-            {/* 360° Studio Orbit Controls */}
-            <OrbitControls
-              enableDamping
-              dampingFactor={0.05}
-              autoRotate={isAutoRotating}
-              autoRotateSpeed={1.0}
-              maxDistance={120}
-              minDistance={6}
-            />
+              {/* 360° Studio Orbit Controls */}
+              <OrbitControls
+                enableDamping
+                dampingFactor={0.05}
+                autoRotate={isAutoRotating}
+                autoRotateSpeed={1.0}
+                maxDistance={120}
+                minDistance={6}
+              />
 
-            {/* Soft Studio Floor Shadow Disc */}
-            <group position={[0, -18.0, 0]}>
-              <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0, 24, 64]} />
-                <meshBasicMaterial
-                  color="#94a3b8"
-                  transparent
-                  opacity={blueprintMode ? 0.2 : 0.35}
-                />
-              </mesh>
-            </group>
+              {/* Soft Studio Floor Shadow Disc */}
+              <group position={[0, -18.0, 0]}>
+                <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[0, 24, 64]} />
+                  <meshBasicMaterial
+                    color="#94a3b8"
+                    transparent
+                    opacity={blueprintMode ? 0.2 : 0.35}
+                  />
+                </mesh>
+              </group>
 
-            {/* Model Presentation Group */}
-            <StudioModelRenderer
-              modelId={selectedModelId}
-              blueprintMode={blueprintMode}
-              nominalFrame={nominalFrame}
-              defaultMission={defaultMission}
-              onSelectComponent={setSelectedComponent}
-              onHoverComponent={setHoveredComponent}
-            />
-          </Canvas>
+              {/* Model Presentation Group */}
+              <StudioModelRenderer
+                modelId={selectedModelId}
+                blueprintMode={blueprintMode}
+                nominalFrame={nominalFrame}
+                defaultMission={defaultMission}
+                onSelectComponent={setSelectedComponent}
+                onHoverComponent={setHoveredComponent}
+              />
+            </Canvas>
+          </SceneErrorBoundary>
 
           {/* Subsystem Hover Pill (Bottom Center of Showroom) */}
           {activeComponent ? (

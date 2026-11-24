@@ -35,6 +35,7 @@ interface Props {
   onSkipToOrbit: () => void;
   deepSpaceActive?: boolean;
   onToggleDeepSpace?: (active: boolean) => void;
+  commissioningTime?: number;
 }
 
 function getFlightDirectorCallout(t: number, maxTime: number): { phase: string; details: string } {
@@ -126,6 +127,7 @@ export function LaunchView({
   onSkipToOrbit,
   deepSpaceActive: controlledDeepSpaceActive,
   onToggleDeepSpace,
+  commissioningTime,
 }: Props) {
   const maxTime_s = trajectory.summary.cutoffTime_s;
   const altKm = currentState.altitude_m / 1000.0;
@@ -179,6 +181,22 @@ export function LaunchView({
     rocketAudio.current?.update(currentState.thrust_N, currentState.altitude_m, isPlaying);
   }, [currentState.thrust_N, currentState.altitude_m, isPlaying]);
 
+  // Suspend/mute audio when document/tab is hidden
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        rocketAudio.current?.suspend();
+      } else if (isAudioOn && isPlaying) {
+        rocketAudio.current?.resume();
+        rocketAudio.current?.update(currentState.thrust_N, currentState.altitude_m, isPlaying);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isAudioOn, isPlaying, currentState.thrust_N, currentState.altitude_m]);
+
   const handleToggleAudio = () => {
     if (rocketAudio.current) {
       const next = rocketAudio.current.toggle();
@@ -228,6 +246,7 @@ export function LaunchView({
             blueprintMode={blueprintMode}
             onToggleBlueprint={() => setBlueprintMode(!blueprintMode)}
             onSelectComponent={setSelectedComponent}
+            commissioningTime={commissioningTime}
           />
 
           {/* Interactive Component & Payload Inspector Drawer */}
@@ -396,7 +415,10 @@ export function LaunchView({
               max={maxTime_s}
               step={0.5}
               value={currentTime_s}
-              onChange={(e) => onSeek(parseFloat(e.target.value))}
+              onChange={(e) => {
+                if (isPlaying) onTogglePlay();
+                onSeek(parseFloat(e.target.value));
+              }}
               className="flex-1 accent-orange-500 h-1.5 bg-slate-800 rounded cursor-pointer"
             />
             <span className="text-xs font-mono text-slate-400 w-16 text-right">

@@ -41,16 +41,6 @@ export function DeepSpaceScene({
   const marsRendezvous = useMemo(() => new THREE.Vector3(210, 0, -110), []);
   const l1Point = useMemo(() => new THREE.Vector3(135, 0, 15), []);
 
-  // Dispose materials/textures on unmount
-  useEffect(() => {
-    return () => {
-      sunMaterial.dispose();
-      marsTextures.map.dispose();
-      marsTextures.bumpMap.dispose();
-      marsTextures.roughnessMap.dispose();
-    };
-  }, [sunMaterial, marsTextures]);
-
   // Dynamic animation loop
   useFrame((_, delta) => {
     // 1. Sun plasma shader animation
@@ -209,7 +199,7 @@ export function DeepSpaceScene({
 
           probeGroupRef.current.position.set(haloX, haloY, haloZ);
           // Primary payload apertures (VELC, SUIT) strictly point toward the Sun (+X)
-          probeGroupRef.current.lookAt(sunCenter.x, haloY * 0.2, haloZ * 0.2);
+          probeGroupRef.current.lookAt(sunCenter);
         }
       }
     }
@@ -394,6 +384,44 @@ export function DeepSpaceScene({
     });
     return new THREE.Line(geom, mat);
   }, [l1Point]);
+
+  // Dispose materials/textures & trajectory lines on unmount
+  useEffect(() => {
+    return () => {
+      sunMaterial.dispose();
+      marsTextures.map.dispose();
+      marsTextures.bumpMap.dispose();
+      marsTextures.roughnessMap.dispose();
+      momPhasingLoops.forEach((l) => {
+        l.geometry.dispose();
+        (l.material as THREE.Material).dispose();
+      });
+      momTransferCurve.geometry.dispose();
+      (momTransferCurve.material as THREE.Material).dispose();
+      marsHeliocentricArc.geometry.dispose();
+      (marsHeliocentricArc.material as THREE.Material).dispose();
+      marsCaptureOrbit.geometry.dispose();
+      (marsCaptureOrbit.material as THREE.Material).dispose();
+      adityaPhasingLoops.forEach((l) => {
+        l.geometry.dispose();
+        (l.material as THREE.Material).dispose();
+      });
+      adityaTliCurve.geometry.dispose();
+      (adityaTliCurve.material as THREE.Material).dispose();
+      l1HaloCurve.geometry.dispose();
+      (l1HaloCurve.material as THREE.Material).dispose();
+    };
+  }, [
+    sunMaterial,
+    marsTextures,
+    momPhasingLoops,
+    momTransferCurve,
+    marsHeliocentricArc,
+    marsCaptureOrbit,
+    adityaPhasingLoops,
+    adityaTliCurve,
+    l1HaloCurve,
+  ]);
 
   return (
     <group>

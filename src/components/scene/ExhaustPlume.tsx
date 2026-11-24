@@ -94,7 +94,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const throttle = Math.min(1.0, Math.max(0.1, simFrame.thrust_N / 4800000.0));
 
   useFrame((_, delta) => {
-    if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.altitude_m >= 120000 || simFrame.thrust_N <= 0) {
+    if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.thrust_N <= 0) {
       return;
     }
 
@@ -233,7 +233,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
 
   const padSmokeOpacity = Math.max(0, 0.45 * (1.0 - t / 12.0));
 
-  if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.altitude_m >= 120000 || simFrame.thrust_N <= 0) {
+  if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.thrust_N <= 0) {
     return null;
   }
 

@@ -227,14 +227,14 @@ export function OrbitScene({
       const vz = -orbitRadius * Math.sin(orbitAngle) * Math.sin(incRad);
       alongTrackVecRef.current.set(vx, vy, vz).normalize();
 
-      // Cross-track = alongTrack x zenith
+      // X = Y × Z
       crossTrackVecRef.current
-        .crossVectors(alongTrackVecRef.current, zenithVecRef.current)
+        .crossVectors(zenithVecRef.current, alongTrackVecRef.current)
         .normalize();
 
-      // Re-orthogonalize along-track
+      // Re-orthogonalize Z = X × Y
       alongTrackVecRef.current
-        .crossVectors(zenithVecRef.current, crossTrackVecRef.current)
+        .crossVectors(crossTrackVecRef.current, zenithVecRef.current)
         .normalize();
 
       // Set rotation matrix: X=crossTrack, Y=zenith, Z=alongTrack

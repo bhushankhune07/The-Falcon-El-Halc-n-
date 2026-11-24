@@ -18,6 +18,7 @@ interface Props {
   blueprintMode?: boolean;
   onToggleBlueprint?: () => void;
   onSelectComponent?: (comp: InspectableComponent) => void;
+  commissioningTime?: number;
 }
 
 /**
@@ -89,32 +90,10 @@ export function MissionCanvas({
   blueprintMode = false,
   onToggleBlueprint,
   onSelectComponent,
+  commissioningTime = 0,
 }: Props) {
   const [showOrbitBadge, setShowOrbitBadge] = useState(false);
   const [hoveredComponent, setHoveredComponent] = useState<InspectableComponent | null>(null);
-
-  // Independent real-time commissioning timer (0 -> 10s) once ps4Cutoff is true
-  const [commissioningTime, setCommissioningTime] = useState<number>(0);
-
-  useEffect(() => {
-    if (!simFrame.ps4Cutoff) {
-      setCommissioningTime(0);
-      return;
-    }
-    let last = performance.now();
-    let animId: number;
-    const tick = (now: number) => {
-      const delta = (now - last) / 1000.0;
-      last = now;
-      setCommissioningTime((prev) => {
-        const next = prev + delta;
-        return next >= 10.0 ? 10.0 : next;
-      });
-      animId = requestAnimationFrame(tick);
-    };
-    animId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animId);
-  }, [simFrame.ps4Cutoff, mission?.id]);
 
   // Cross-fade threshold around 120 km
   const altKm = simFrame.altitude_m / 1000.0;
