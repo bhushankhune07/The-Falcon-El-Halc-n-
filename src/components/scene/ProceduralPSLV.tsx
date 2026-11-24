@@ -320,7 +320,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               throatRadius={0.45}
               exitRadius={1.15}
               height={2.2}
-              isFiring={!simFrame.ps1Detached && simFrame.thrust_N > 1000}
+              isFiring={!simFrame.ps1Detached && !simFrame.ps4Cutoff && simFrame.thrust_N > 1000}
               glowColor="#fed7aa"
             />
           </group>
@@ -374,10 +374,24 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               />
             </mesh>
 
-            {/* Aerodynamic Nosecone */}
-            <mesh position={[0, straponHeight / 2 + 1.2, 0]} castShadow>
-              <coneGeometry args={[straponRadius, 2.4, 20]} />
-              <meshStandardMaterial color="#ea580c" roughness={0.4} metalness={0.2} />
+            {/* Sculpted Ogive Aerodynamic Nosecone */}
+            <mesh position={[0, straponHeight / 2 + 1.3, 0]} castShadow>
+              <cylinderGeometry args={[0.02, straponRadius, 2.6, 20]} />
+              <meshStandardMaterial color="#ea580c" roughness={0.35} metalness={0.25} />
+            </mesh>
+            <mesh position={[0, straponHeight / 2 + 0.3, 0]}>
+              <cylinderGeometry args={[straponRadius + 0.015, straponRadius + 0.015, 0.6, 20]} />
+              <meshStandardMaterial color="#ea580c" roughness={0.35} metalness={0.25} />
+            </mesh>
+
+            {/* Separation Retro-Rocket Pods */}
+            <mesh position={[0, straponHeight / 2 - 0.5, straponRadius + 0.04]}>
+              <boxGeometry args={[0.14, 0.45, 0.1]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} />
+            </mesh>
+            <mesh position={[0, -straponHeight / 2 + 0.8, straponRadius + 0.04]}>
+              <boxGeometry args={[0.14, 0.45, 0.1]} />
+              <meshStandardMaterial color="#334155" metalness={0.8} />
             </mesh>
 
             {/* Secondary Injection Thrust Vector Control (SITVC) Tank */}
@@ -395,7 +409,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
                 throatRadius={0.18}
                 exitRadius={0.46}
                 height={1.3}
-                isFiring={!isDetached && simFrame.thrust_N > 1000}
+                isFiring={!isDetached && !simFrame.ps4Cutoff && simFrame.thrust_N > 1000}
                 glowColor="#fed7aa"
                 hasActuators={false}
               />
@@ -476,7 +490,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               throatRadius={0.38}
               exitRadius={1.02}
               height={2.2}
-              isFiring={!simFrame.ps2Detached && simFrame.activeStages.includes('ps2')}
+              isFiring={!simFrame.ps2Detached && !simFrame.ps4Cutoff && simFrame.activeStages.includes('ps2') && simFrame.thrust_N > 1000}
               glowColor="#e0f2fe"
             />
           </group>
@@ -518,7 +532,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               throatRadius={0.25}
               exitRadius={0.68}
               height={1.2}
-              isFiring={!simFrame.ps3Detached && simFrame.activeStages.includes('ps3')}
+              isFiring={!simFrame.ps3Detached && !simFrame.ps4Cutoff && simFrame.activeStages.includes('ps3') && simFrame.thrust_N > 1000}
               glowColor="#fed7aa"
             />
           </group>
@@ -563,7 +577,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             throatRadius={0.09}
             exitRadius={0.26}
             height={0.85}
-            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4')}
+            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
             glowColor="#e0f2fe"
           />
         </group>
@@ -572,7 +586,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             throatRadius={0.09}
             exitRadius={0.26}
             height={0.85}
-            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4')}
+            isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
             glowColor="#e0f2fe"
           />
         </group>

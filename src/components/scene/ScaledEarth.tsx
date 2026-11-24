@@ -18,13 +18,13 @@ export function ScaledEarth({ radius = 60 }: Props) {
   const earthMeshRef = useRef<THREE.Mesh>(null);
   const cloudsMeshRef = useRef<THREE.Mesh>(null);
 
-  const { map, bumpMap, roughnessMap, cloudsMap } = useMemo(
+  const { map, normalMap, roughnessMap, cloudsMap } = useMemo(
     () => getProceduralEarthPBRTextures(),
     []
   );
 
   const atmosphereMaterial = useMemo(
-    () => createAtmosphereShaderMaterial('#38bdf8', 0.8, 2.8),
+    () => createAtmosphereShaderMaterial('#38bdf8', 0.65, 3.0),
     []
   );
 
@@ -40,36 +40,36 @@ export function ScaledEarth({ radius = 60 }: Props) {
 
   return (
     <group position={[0, 0, 0]}>
-      {/* 1. High-Fidelity Earth Globe with PBR Bump & Roughness */}
+      {/* 1. High-Fidelity Earth Globe with PBR Normal & Roughness */}
       <mesh ref={earthMeshRef} receiveShadow castShadow>
         <sphereGeometry args={[radius, 64, 48]} />
         <meshStandardMaterial
           map={map}
-          bumpMap={bumpMap}
-          bumpScale={0.8}
+          normalMap={normalMap}
+          normalScale={new THREE.Vector2(0.85, 0.85)}
           roughnessMap={roughnessMap}
           roughness={0.65}
-          metalness={0.12}
+          metalness={0.15}
           emissive="#0a2444"
-          emissiveIntensity={0.25}
+          emissiveIntensity={0.2}
         />
       </mesh>
 
-      {/* 2. Rotating Procedural Cloud Layer Shell (Radius * 1.014) */}
+      {/* 2. Rotating Procedural Cloud Layer Shell (Radius * 1.012) */}
       <mesh ref={cloudsMeshRef}>
-        <sphereGeometry args={[radius * 1.014, 48, 36]} />
+        <sphereGeometry args={[radius * 1.012, 48, 36]} />
         <meshStandardMaterial
           map={cloudsMap}
           transparent
-          opacity={0.38}
+          opacity={0.42}
           roughness={1.0}
           depthWrite={false}
         />
       </mesh>
 
-      {/* 3. Custom GLSL Rayleigh Atmospheric Limb Scatter Halo */}
+      {/* 3. Custom GLSL Rayleigh Atmospheric Limb Scatter Halo (Radius * 1.026) */}
       <mesh>
-        <sphereGeometry args={[radius * 1.035, 48, 36]} />
+        <sphereGeometry args={[radius * 1.026, 48, 36]} />
         <primitive object={atmosphereMaterial} attach="material" />
       </mesh>
     </group>

@@ -412,14 +412,14 @@ export function ModelBriefingView() {
       {/* ======================================================== */}
       {/* CENTER: 3D STUDIO SHOWROOM CANVAS (~50% WIDTH)           */}
       {/* ======================================================== */}
-      <section className="flex-1 h-full min-h-[400px] relative bg-[#020617] overflow-hidden flex flex-col">
+      <section className="flex-1 h-full min-h-[400px] relative bg-[#f1f5f9] overflow-hidden flex flex-col">
         {/* Top Floating Studio Controls Bar */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
           {/* Active Model Pill */}
-          <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/90 backdrop-blur-md border border-slate-800 text-xs font-mono shadow-xl">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="font-bold text-white">{modelMeta.name}</span>
-            <span className="text-[10px] text-slate-400 hidden sm:inline">
+          <div className="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/95 backdrop-blur-md border border-slate-300 text-xs font-mono shadow-md text-slate-900">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            <span className="font-bold text-slate-900">{modelMeta.name}</span>
+            <span className="text-[10px] text-slate-500 hidden sm:inline">
               | {modelMeta.category}
             </span>
           </div>
@@ -428,10 +428,10 @@ export function ModelBriefingView() {
           <div className="pointer-events-auto flex items-center gap-2">
             <button
               onClick={() => setIsAutoRotating(!isAutoRotating)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-all shadow-md ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-all shadow-sm ${
                 isAutoRotating
-                  ? 'bg-slate-900/90 text-cyan-300 border-cyan-500/50'
-                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200'
+                  ? 'bg-slate-900 text-white border-slate-800'
+                  : 'bg-white/95 text-slate-700 border-slate-300 hover:text-slate-950'
               }`}
               title="Toggle automatic turntable rotation"
             >
@@ -441,10 +441,10 @@ export function ModelBriefingView() {
 
             <button
               onClick={() => setBlueprintMode(!blueprintMode)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all shadow-md ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all shadow-sm ${
                 blueprintMode
-                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-cyan-950/50'
-                  : 'bg-slate-900/90 text-slate-300 border-slate-700 hover:border-slate-500'
+                  ? 'bg-cyan-600 text-white border-cyan-700'
+                  : 'bg-white/95 text-slate-700 border-slate-300 hover:text-slate-950'
               }`}
             >
               <span>📐 Blueprint: {blueprintMode ? 'ON' : 'OFF'}</span>
@@ -462,11 +462,12 @@ export function ModelBriefingView() {
             }}
             camera={{ position: [0, 6, 32], fov: 46, near: 0.1, far: 50000 }}
           >
-            {/* 3-Point Studio Lighting */}
-            <ambientLight intensity={0.65} />
-            <directionalLight position={[25, 40, 30]} intensity={2.6} castShadow />
-            <directionalLight position={[-25, 15, -20]} intensity={1.2} />
-            <directionalLight position={[0, -20, -30]} intensity={0.8} />
+            {/* Bright Studio 3-Point + Hemisphere Lighting */}
+            <ambientLight intensity={1.1} />
+            <hemisphereLight args={['#ffffff', '#cbd5e1', 1.0]} />
+            <directionalLight position={[25, 40, 30]} intensity={2.2} castShadow />
+            <directionalLight position={[-25, 20, -20]} intensity={1.4} />
+            <directionalLight position={[0, -10, 20]} intensity={0.6} />
 
             {/* 360° Studio Orbit Controls */}
             <OrbitControls
@@ -478,26 +479,14 @@ export function ModelBriefingView() {
               minDistance={6}
             />
 
-            {/* Studio Showroom Pedestal Platform */}
-            <group position={[0, -18.2, 0]}>
-              {/* Outer circular brushed ring */}
-              <mesh receiveShadow position={[0, -0.25, 0]}>
-                <cylinderGeometry args={[22, 24, 0.5, 48]} />
-                <meshStandardMaterial
-                  color="#0f172a"
-                  roughness={0.6}
-                  metalness={0.7}
-                  wireframe={blueprintMode}
-                />
-              </mesh>
-              {/* Center illuminated turntable disc */}
-              <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[12, 21.8, 48]} />
+            {/* Soft Studio Floor Shadow Disc */}
+            <group position={[0, -18.0, 0]}>
+              <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0, 24, 64]} />
                 <meshBasicMaterial
-                  color={blueprintMode ? '#00f0ff' : '#1e293b'}
+                  color="#94a3b8"
                   transparent
-                  opacity={blueprintMode ? 0.4 : 0.75}
-                  wireframe={blueprintMode}
+                  opacity={blueprintMode ? 0.2 : 0.35}
                 />
               </mesh>
             </group>
@@ -516,18 +505,18 @@ export function ModelBriefingView() {
           {/* Subsystem Hover Pill (Bottom Center of Showroom) */}
           {activeComponent ? (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur border border-cyan-500/50 shadow-xl shadow-cyan-950/40 text-xs font-mono">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                <span className="text-white font-bold">{activeComponent.name}</span>
-                <span className="text-[10px] text-cyan-300">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur border border-slate-300 shadow-xl text-xs font-mono text-slate-900">
+                <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+                <span className="text-slate-900 font-bold">{activeComponent.name}</span>
+                <span className="text-[10px] text-slate-600">
                   | {activeComponent.thrustOrResolution || activeComponent.propellantOrSensor}
                 </span>
               </div>
             </div>
           ) : (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/70 backdrop-blur border border-slate-800 text-[10px] font-mono text-slate-400">
-                <RotateCcw className="w-3 h-3 text-cyan-400" />
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur border border-slate-300 text-[10px] font-mono text-slate-600 shadow-sm">
+                <RotateCcw className="w-3 h-3 text-slate-700" />
                 <span>Drag to rotate 360° • Scroll to zoom • Click parts to inspect</span>
               </div>
             </div>

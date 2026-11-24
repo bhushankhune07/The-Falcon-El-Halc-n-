@@ -23,6 +23,7 @@ export function DeepSpaceScene({
   onHoverComponent,
 }: Props) {
   const marsRef = useRef<THREE.Mesh>(null);
+  const marsGroupRef = useRef<THREE.Group>(null);
   const sunMeshRef = useRef<THREE.Mesh>(null);
   const coronaRef = useRef<THREE.Mesh>(null);
   const probeGroupRef = useRef<THREE.Group>(null);
@@ -61,9 +62,15 @@ export function DeepSpaceScene({
       coronaRef.current.rotation.y += delta * 0.008;
     }
 
-    // 2. Mars rotation
+    // 2. Mars rotation & orbital movement along heliocentric arc
     if (marsRef.current) {
       marsRef.current.rotation.y += delta * 0.012;
+    }
+    if (marsGroupRef.current) {
+      const currentMarsAngle = -0.48 - Math.max(0, 0.67 - phaseProgress) * 0.45;
+      const currentMarsX = Math.cos(currentMarsAngle) * 236;
+      const currentMarsZ = Math.sin(currentMarsAngle) * 236;
+      marsGroupRef.current.position.set(currentMarsX, 0, currentMarsZ);
     }
 
     // 3. L1 Reticule pulse & rotation
@@ -416,8 +423,8 @@ export function DeepSpaceScene({
           {/* Phase 3: Mars Capture Elliptical Orbit (421 km x 76,993 km) */}
           <primitive object={marsCaptureOrbit} />
 
-          {/* 3D MARS GLOBE (Destination at [210, 0, -110]) */}
-          <group position={[marsRendezvous.x, marsRendezvous.y, marsRendezvous.z]}>
+          {/* 3D MARS GLOBE (Moving along heliocentric orbit to rendezvous at 100%) */}
+          <group ref={marsGroupRef} position={[marsRendezvous.x, marsRendezvous.y, marsRendezvous.z]}>
             {/* Mars Sphere with PBR bump & roughness maps */}
             <mesh ref={marsRef} castShadow receiveShadow>
               <sphereGeometry args={[32, 64, 48]} />

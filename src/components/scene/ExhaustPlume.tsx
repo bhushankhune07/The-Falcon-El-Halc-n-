@@ -94,6 +94,10 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const throttle = Math.min(1.0, Math.max(0.1, simFrame.thrust_N / 4800000.0));
 
   useFrame((_, delta) => {
+    if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.altitude_m >= 120000 || simFrame.thrust_N <= 0) {
+      return;
+    }
+
     // Dynamic flame flicker & GLSL shader time updates
     const flicker = 0.9 + Math.sin(t * 45.0) * 0.08 + Math.cos(t * 70.0) * 0.04;
 
@@ -228,6 +232,10 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   });
 
   const padSmokeOpacity = Math.max(0, 0.45 * (1.0 - t / 12.0));
+
+  if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.altitude_m >= 120000 || simFrame.thrust_N <= 0) {
+    return null;
+  }
 
   return (
     <group position={[0, -0.5, 0]}>

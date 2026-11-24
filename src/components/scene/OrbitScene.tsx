@@ -110,7 +110,6 @@ export function OrbitScene({
   const satelliteGroupRef = useRef<THREE.Group>(null);
   const ps4GroupRef = useRef<THREE.Group>(null);
   const radarConeRef = useRef<THREE.Mesh>(null);
-  const radarFootprintRef = useRef<THREE.Mesh>(null);
   const swathStripRef = useRef<THREE.Line>(null);
 
   const continuousOrbitAngleRef = useRef<number>(0);
@@ -118,17 +117,12 @@ export function OrbitScene({
   const zenithVecRef = useRef(new THREE.Vector3());
   const alongTrackVecRef = useRef(new THREE.Vector3());
   const crossTrackVecRef = useRef(new THREE.Vector3());
-  const groundPosRef = useRef(new THREE.Vector3());
-  const originRef = useRef(new THREE.Vector3(0, 0, 0));
 
   const earthRadius = 60.0;
   const incDeg = targetOrbit?.inclination_deg ?? 97.6;
   const incRad = (incDeg * Math.PI) / 180.0;
-  const targetAltKm = targetOrbit?.altitude_km ?? 529.0;
-  const targetOrbitRadius = earthRadius + (targetAltKm / 6378.137) * earthRadius;
-
-  const orbitRadius =
-    earthRadius + (Math.max(120000, simFrame.altitude_m) / 6378137.0) * earthRadius;
+  const targetOrbitRadius = earthRadius * 1.32;
+  const orbitRadius = earthRadius * 1.32;
 
   // Post-Cutoff Commissioning Elapsed Time (Independent real-time elapsed timer 0..10s)
   const dtCutoff = simFrame.ps4Cutoff ? (commissioningTime ?? 0) : 0;
@@ -270,26 +264,15 @@ export function OrbitScene({
       );
     }
 
-    // 4. C-band SAR Radar Beam & Ground Footprint Swath
+    // 4. C-band SAR Radar Beam Sweeping Ground Track
     const isRadarActive = simFrame.ps4Cutoff && dtCutoff >= 6.0;
 
     if (radarConeRef.current) {
       radarConeRef.current.visible = isRadarActive;
       if (isRadarActive) {
         // Pulse sweep effect
-        const pulse = 0.35 + Math.sin(continuousOrbitAngleRef.current * 14.0) * 0.14;
+        const pulse = 0.3 + Math.sin(continuousOrbitAngleRef.current * 14.0) * 0.12;
         (radarConeRef.current.material as THREE.MeshBasicMaterial).opacity = pulse;
-      }
-    }
-
-    if (radarFootprintRef.current) {
-      radarFootprintRef.current.visible = isRadarActive;
-      if (isRadarActive) {
-        groundPosRef.current
-          .copy(zenithVecRef.current)
-          .multiplyScalar(earthRadius + 0.16);
-        radarFootprintRef.current.position.copy(groundPosRef.current);
-        radarFootprintRef.current.lookAt(originRef.current);
       }
     }
 
@@ -395,15 +378,15 @@ export function OrbitScene({
             {/* Radar Swath Cone: Translucent beam sweeping down strictly toward Nadir */}
             <mesh
               ref={radarConeRef}
-              position={[0, -3.2, 0]}
+              position={[0, -0.92 - (orbitRadius - earthRadius) / 2, 0]}
               rotation={[0, 0, 0]}
               visible={false}
             >
-              <coneGeometry args={[2.8, 6.2, 20, 1, true]} />
+              <coneGeometry args={[3.2, orbitRadius - earthRadius, 24, 1, true]} />
               <meshBasicMaterial
                 color="#22d3ee"
                 transparent
-                opacity={0.35}
+                opacity={0.3}
                 side={THREE.DoubleSide}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
@@ -431,19 +414,6 @@ export function OrbitScene({
             {/* Spacecraft status beacon */}
             <pointLight color="#38bdf8" intensity={1.8} distance={18} />
           </group>
-
-          {/* Radar Ground Footprint on Earth's Surface */}
-          <mesh ref={radarFootprintRef} visible={false}>
-            <ringGeometry args={[0.6, 3.6, 24]} />
-            <meshBasicMaterial
-              color="#22d3ee"
-              transparent
-              opacity={0.55}
-              side={THREE.DoubleSide}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </mesh>
 
           {/* Orbital Scene Lighting */}
           <ambientLight intensity={0.8} />

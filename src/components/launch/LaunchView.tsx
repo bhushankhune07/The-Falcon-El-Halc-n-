@@ -138,10 +138,27 @@ export function LaunchView({
   const deepSpaceActive = controlledDeepSpaceActive !== undefined ? controlledDeepSpaceActive : internalDeepSpaceActive;
   const setDeepSpaceActive = onToggleDeepSpace ?? setInternalDeepSpaceActive;
   const [deepSpacePhase, setDeepSpacePhase] = useState(0.0);
+  const [isTransferPlaying, setIsTransferPlaying] = useState(false);
+
+  // Smooth playback of deep-space transfer progress (0 -> 1)
+  useEffect(() => {
+    if (!isTransferPlaying || !deepSpaceActive) return;
+    const interval = setInterval(() => {
+      setDeepSpacePhase((prev) => {
+        if (prev >= 1.0) {
+          setIsTransferPlaying(false);
+          return 1.0;
+        }
+        return Math.min(1.0, prev + 0.005);
+      });
+    }, 40);
+    return () => clearInterval(interval);
+  }, [isTransferPlaying, deepSpaceActive]);
 
   // Reset transfer progress to 0% on mission switch
   useEffect(() => {
     setDeepSpacePhase(0.0);
+    setIsTransferPlaying(false);
   }, [mission.id]);
 
   const isDeepSpaceMission = mission.id === 'pslv-c25-mom' || mission.id === 'pslv-c57-aditya-l1';
@@ -426,13 +443,27 @@ export function LaunchView({
 
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-purple-400">Transfer Progress:</span>
+                <button
+                  onClick={() => {
+                    if (deepSpacePhase >= 1.0) setDeepSpacePhase(0);
+                    setIsTransferPlaying((p) => !p);
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-800/80 hover:bg-purple-700 text-white font-mono text-[10px] border border-purple-500/50 shadow-sm transition-all"
+                  title={isTransferPlaying ? 'Pause Transfer Cruise' : 'Play Transfer Cruise Animation'}
+                >
+                  {isTransferPlaying ? <Pause className="w-2.5 h-2.5" /> : <Play className="w-2.5 h-2.5" />}
+                  <span>{isTransferPlaying ? 'Pause' : 'Play'}</span>
+                </button>
                 <input
                   type="range"
                   min={0}
                   max={1}
                   step={0.01}
                   value={deepSpacePhase}
-                  onChange={(e) => setDeepSpacePhase(parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    setIsTransferPlaying(false);
+                    setDeepSpacePhase(parseFloat(e.target.value));
+                  }}
                   className="w-32 accent-purple-500 h-1.5 bg-slate-800 rounded cursor-pointer"
                 />
                 <span className="text-[10px] text-purple-300 w-10 text-right">
