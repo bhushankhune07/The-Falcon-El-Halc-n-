@@ -1,8 +1,9 @@
-import { useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
 import { StageDefinition } from '../../sim';
+import { createRocketPlumeShaderMaterial } from './textures/proceduralTextures';
 
 interface Props {
   simFrame: SimFrameState;
@@ -17,6 +18,28 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const padSmokeRef = useRef<THREE.Group>(null);
   const liftoffLightRef = useRef<THREE.PointLight>(null);
   const shockDiamondsRef = useRef<THREE.Group>(null);
+
+  // Dynamic GLSL plume shader materials
+  const solidPlumeMat = useMemo(
+    () => createRocketPlumeShaderMaterial('#fffbeb', '#f97316', '#ea580c'),
+    []
+  );
+  const liquidPlumeMat = useMemo(
+    () => createRocketPlumeShaderMaterial('#f0f9ff', '#38bdf8', '#c084fc'),
+    []
+  );
+  const ps4PlumeMat = useMemo(
+    () => createRocketPlumeShaderMaterial('#e0f2fe', '#06b6d4', '#818cf8'),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      solidPlumeMat.dispose();
+      liquidPlumeMat.dispose();
+      ps4PlumeMat.dispose();
+    };
+  }, [solidPlumeMat, liquidPlumeMat, ps4PlumeMat]);
 
   const t = simFrame.time_s;
   const isThrusting = simFrame.thrust_N > 1000;
@@ -35,25 +58,30 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const ps4BurnEnd = ps4 ? ps4.ignitionTime_s + ps4.burnDuration_s : 1029.0;
 
   // Staging separation flame gap: 1.5s cutoff window around PS1 -> PS2 and PS2 -> PS3
-  // Main flame cuts off completely while the spent stage drops away
-  const isPS1toPS2Gap = t >= (ps1BurnEnd - 0.2) && t < (ps2Ign + 0.3);
-  const isPS2toPS3Gap = t >= (ps2BurnEnd - 0.2) && t < (ps3Ign + 0.3);
+  const isPS1toPS2Gap = t >= ps1BurnEnd - 0.2 && t < ps2Ign + 0.3;
+  const isPS2toPS3Gap = t >= ps2BurnEnd - 0.2 && t < ps3Ign + 0.3;
   const isStagingFlameCutoff = isPS1toPS2Gap || isPS2toPS3Gap;
 
   // Determine active propulsion type from mission stages
-  // Solid stages: PS1 / strap-ons (t < ps1BurnEnd) or PS3 (t >= ps3Ign && t < ps3BurnEnd)
-  const isSolidActive = !isStagingFlameCutoff && ((t < ps1BurnEnd - 0.2) || (t >= ps3Ign + 0.3 && t < ps3BurnEnd));
+  const isSolidActive =
+    !isStagingFlameCutoff &&
+    (t < ps1BurnEnd - 0.2 || (t >= ps3Ign + 0.3 && t < ps3BurnEnd));
 
   // Liquid stage: PS2 Vikas
-  const isPS2Active = !isStagingFlameCutoff && (t >= ps2Ign + 0.3 && t < ps2BurnEnd - 0.2);
+  const isPS2Active = !isStagingFlameCutoff && t >= ps2Ign + 0.3 && t < ps2BurnEnd - 0.2;
 
-  // Upper stage: PS4 twin liquid engines (gated on !simFrame.ps4Cutoff)
-  const isPS4Active = !isStagingFlameCutoff && (t >= ps4Ign && t < ps4BurnEnd && !simFrame.ps4Cutoff && isThrusting);
+  // Upper stage: PS4 twin liquid engines
+  const isPS4Active =
+    !isStagingFlameCutoff &&
+    t >= ps4Ign &&
+    t < ps4BurnEnd &&
+    !simFrame.ps4Cutoff &&
+    isThrusting;
 
   // Active stage nozzle positions relative to rocket group
-  const solidY = (t >= ps3Ign && t < ps3BurnEnd) ? 33.0 : -1.2;
+  const solidY = t >= ps3Ign && t < ps3BurnEnd ? 33.0 : -1.2;
   const liquidY = 20.0; // PS2 Vikas center nozzle exit
-  const ps4Y = 38.1;    // PS4 twin engines exit level
+  const ps4Y = 38.1; // PS4 twin engines exit level
 
   // Plume vacuum expansion factor (flares wider at high altitude)
   const vacExpansion = Math.min(2.5, 1.0 + simFrame.altitude_m / 60000.0);
@@ -66,27 +94,68 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const throttle = Math.min(1.0, Math.max(0.1, simFrame.thrust_N / 4800000.0));
 
   useFrame((_, delta) => {
-    // Dynamic flame flicker
+    // Dynamic flame flicker & GLSL shader time updates
     const flicker = 0.9 + Math.sin(t * 45.0) * 0.08 + Math.cos(t * 70.0) * 0.04;
+
+    if (solidPlumeMat.uniforms?.uTime) {
+      solidPlumeMat.uniforms.uTime.value += delta;
+    }
+    if (liquidPlumeMat.uniforms?.uTime) {
+      liquidPlumeMat.uniforms.uTime.value += delta;
+    }
+    if (ps4PlumeMat.uniforms?.uTime) {
+      ps4PlumeMat.uniforms.uTime.value += delta;
+    }
 
     if (solidPlumeRef.current) {
       solidPlumeRef.current.position.y = solidY;
       const targetScaleY = isSolidActive && isThrusting ? throttle * flicker * 12.0 : 0.001;
       const targetScaleXZ = isSolidActive && isThrusting ? flicker * vacExpansion : 0.001;
 
-      solidPlumeRef.current.scale.y = THREE.MathUtils.damp(solidPlumeRef.current.scale.y, targetScaleY, 18, delta);
-      solidPlumeRef.current.scale.x = THREE.MathUtils.damp(solidPlumeRef.current.scale.x, targetScaleXZ, 18, delta);
-      solidPlumeRef.current.scale.z = THREE.MathUtils.damp(solidPlumeRef.current.scale.z, targetScaleXZ, 18, delta);
+      solidPlumeRef.current.scale.y = THREE.MathUtils.damp(
+        solidPlumeRef.current.scale.y,
+        targetScaleY,
+        18,
+        delta
+      );
+      solidPlumeRef.current.scale.x = THREE.MathUtils.damp(
+        solidPlumeRef.current.scale.x,
+        targetScaleXZ,
+        18,
+        delta
+      );
+      solidPlumeRef.current.scale.z = THREE.MathUtils.damp(
+        solidPlumeRef.current.scale.z,
+        targetScaleXZ,
+        18,
+        delta
+      );
     }
 
     if (liquidPlumeRef.current) {
       liquidPlumeRef.current.position.y = liquidY;
-      const targetScaleY = isPS2Active && isThrusting ? (0.6 + throttle * 0.8) * flicker * 9.0 : 0.001;
+      const targetScaleY =
+        isPS2Active && isThrusting ? (0.6 + throttle * 0.8) * flicker * 9.0 : 0.001;
       const targetScaleXZ = isPS2Active && isThrusting ? flicker * liquidVacRadial * 1.2 : 0.001;
 
-      liquidPlumeRef.current.scale.y = THREE.MathUtils.damp(liquidPlumeRef.current.scale.y, targetScaleY, 18, delta);
-      liquidPlumeRef.current.scale.x = THREE.MathUtils.damp(liquidPlumeRef.current.scale.x, targetScaleXZ, 18, delta);
-      liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(liquidPlumeRef.current.scale.z, targetScaleXZ, 18, delta);
+      liquidPlumeRef.current.scale.y = THREE.MathUtils.damp(
+        liquidPlumeRef.current.scale.y,
+        targetScaleY,
+        18,
+        delta
+      );
+      liquidPlumeRef.current.scale.x = THREE.MathUtils.damp(
+        liquidPlumeRef.current.scale.x,
+        targetScaleXZ,
+        18,
+        delta
+      );
+      liquidPlumeRef.current.scale.z = THREE.MathUtils.damp(
+        liquidPlumeRef.current.scale.z,
+        targetScaleXZ,
+        18,
+        delta
+      );
     }
 
     if (ps4PlumesRef.current) {
@@ -94,9 +163,24 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
       const targetScaleY = isPS4Active ? flicker * 1.0 : 0.001;
       const targetScaleXZ = isPS4Active ? flicker * 1.0 : 0.001;
 
-      ps4PlumesRef.current.scale.y = THREE.MathUtils.damp(ps4PlumesRef.current.scale.y, targetScaleY, 18, delta);
-      ps4PlumesRef.current.scale.x = THREE.MathUtils.damp(ps4PlumesRef.current.scale.x, targetScaleXZ, 18, delta);
-      ps4PlumesRef.current.scale.z = THREE.MathUtils.damp(ps4PlumesRef.current.scale.z, targetScaleXZ, 18, delta);
+      ps4PlumesRef.current.scale.y = THREE.MathUtils.damp(
+        ps4PlumesRef.current.scale.y,
+        targetScaleY,
+        18,
+        delta
+      );
+      ps4PlumesRef.current.scale.x = THREE.MathUtils.damp(
+        ps4PlumesRef.current.scale.x,
+        targetScaleXZ,
+        18,
+        delta
+      );
+      ps4PlumesRef.current.scale.z = THREE.MathUtils.damp(
+        ps4PlumesRef.current.scale.z,
+        targetScaleXZ,
+        18,
+        delta
+      );
       ps4PlumesRef.current.visible = isPS4Active || ps4PlumesRef.current.scale.y > 0.01;
     }
 
@@ -136,7 +220,6 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
         padSmokeRef.current.visible = true;
         const spread = 1.0 + t * 1.6;
         padSmokeRef.current.scale.set(spread, Math.min(2.5, 0.6 + t * 0.15), spread);
-        // Anchor to ground flame trench level
         padSmokeRef.current.position.y = -simFrame.altitude_m - 18.0;
       } else {
         padSmokeRef.current.visible = false;
@@ -150,45 +233,30 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
     <group position={[0, -0.5, 0]}>
       {/* ======================================================== */}
       {/* SOLID PROPELLANT PLUME (S12 Strap-ons & PS1 / PS3 Core)   */}
-      {/* Bright Orange-Gold, fiery, dynamic                       */}
+      {/* GLSL Shader Material with turbulent scrolling noise      */}
       {/* ======================================================== */}
       <group ref={solidPlumeRef} position={[0, solidY, 0]}>
-        {/* Core incandescent hot cone */}
-        <mesh position={[0, -1.5, 0]}>
-          <coneGeometry args={[0.9, 3.5, 24, 1, true]} />
-          <meshBasicMaterial
-            color="#fffbeb"
-            transparent
-            opacity={0.95}
-            side={THREE.DoubleSide}
-          />
+        {/* Core animated GLSL flame cone */}
+        <mesh position={[0, -2.5, 0]} material={solidPlumeMat}>
+          <coneGeometry args={[1.5, 5.5, 28, 1, true]} />
         </mesh>
 
-        {/* Outer fiery flame cone */}
-        <mesh position={[0, -2.5, 0]}>
-          <coneGeometry args={[1.6, 5.5, 24, 1, true]} />
-          <meshBasicMaterial
-            color="#f97316"
-            transparent
-            opacity={0.8}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Turbulent outer glow cone */}
-        <mesh position={[0, -3.5, 0]}>
-          <coneGeometry args={[2.2, 7.5, 24, 1, true]} />
+        {/* Outer incandescent envelope */}
+        <mesh position={[0, -3.8, 0]}>
+          <coneGeometry args={[2.4, 8.0, 24, 1, true]} />
           <meshBasicMaterial
             color="#ea580c"
             transparent
             opacity={0.35}
+            blending={THREE.AdditiveBlending}
             side={THREE.DoubleSide}
+            depthWrite={false}
           />
         </mesh>
 
         {/* Soft Solid Nozzle Lip Glow */}
         <mesh position={[0, -0.1, 0]}>
-          <ringGeometry args={[0.3, 1.2, 16]} />
+          <ringGeometry args={[0.3, 1.2, 20]} />
           <meshBasicMaterial
             color="#ffedd5"
             transparent
@@ -199,44 +267,29 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
         </mesh>
 
         {/* Dynamic Point Light from solid flame */}
-        <pointLight color="#ff7700" intensity={4.5} distance={60} decay={2} />
+        <pointLight color="#ff7700" intensity={4.5} distance={65} decay={2} />
       </group>
 
       {/* ======================================================== */}
-      {/* LIQUID PROPELLANT PLUME (PS2 Vikas & PS4 Twin Engines)   */}
-      {/* Translucent Cyan-Violet, shock diamonds, high Isp        */}
+      {/* LIQUID PROPELLANT PLUME (PS2 Vikas Hypergolic)           */}
+      {/* GLSL Shader with shock diamonds and vacuum flare         */}
       {/* ======================================================== */}
       <group ref={liquidPlumeRef} position={[0, liquidY, 0]}>
-        {/* Inner bright plasma core */}
-        <mesh position={[0, -1.0, 0]}>
-          <cylinderGeometry args={[0.2, 0.55, 2.2, 16]} />
-          <meshBasicMaterial
-            color="#e0f2fe"
-            transparent
-            opacity={0.95}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-
-        {/* Middle hypergolic shock cone */}
-        <mesh position={[0, -2.0, 0]}>
-          <coneGeometry args={[1.1, 4.2, 20, 1, true]} />
-          <meshBasicMaterial
-            color="#38bdf8"
-            transparent
-            opacity={0.75}
-            side={THREE.DoubleSide}
-          />
+        {/* Inner animated GLSL hypergolic plume */}
+        <mesh position={[0, -2.2, 0]} material={liquidPlumeMat}>
+          <coneGeometry args={[1.2, 4.8, 24, 1, true]} />
         </mesh>
 
         {/* Outer soft vacuum glow envelope */}
-        <mesh position={[0, -3.2, 0]}>
-          <coneGeometry args={[2.0, 6.2, 20, 1, true]} />
+        <mesh position={[0, -3.6, 0]}>
+          <coneGeometry args={[2.2, 7.2, 24, 1, true]} />
           <meshBasicMaterial
             color="#c084fc"
             transparent
-            opacity={0.3}
+            opacity={0.32}
+            blending={THREE.AdditiveBlending}
             side={THREE.DoubleSide}
+            depthWrite={false}
           />
         </mesh>
 
@@ -248,7 +301,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
               <meshBasicMaterial
                 color="#e0f2fe"
                 transparent
-                opacity={0.88 - idx * 0.15}
+                opacity={0.9 - idx * 0.15}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
               />
@@ -270,59 +323,42 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
 
         {/* High-Altitude Vacuum Expansion Jellyfish Envelope (>35 km) */}
         {simFrame.altitude_m > 35000 && isPS2Active ? (
-          <mesh position={[0, -4.5, 0]}>
-            <coneGeometry args={[3.8, 9.0, 24, 1, true]} />
+          <mesh position={[0, -4.8, 0]}>
+            <coneGeometry args={[4.2, 9.8, 28, 1, true]} />
             <meshBasicMaterial
               color="#a855f7"
               transparent
-              opacity={Math.min(0.25, highAltRatio * 0.25)}
+              opacity={Math.min(0.28, highAltRatio * 0.28)}
+              blending={THREE.AdditiveBlending}
               side={THREE.DoubleSide}
               depthWrite={false}
             />
           </mesh>
         ) : null}
 
-        <pointLight color="#60a5fa" intensity={3.5} distance={45} decay={2} />
+        <pointLight color="#60a5fa" intensity={3.5} distance={50} decay={2} />
       </group>
 
       {/* ======================================================== */}
       {/* PS4 TWIN-ENGINE VACUUM EXPANDED PLUMES                   */}
-      {/* Symmetrical white-cyan core + soft translucent violet bell*/}
+      {/* Symmetrical GLSL cyan/violet vacuum bells                */}
       {/* ======================================================== */}
       <group ref={ps4PlumesRef} visible={false}>
         {[-0.35, 0.35].map((engineX) => (
           <group key={engineX} position={[engineX, 0, 0]}>
-            {/* Bright white-cyan inner core */}
-            <mesh position={[0, -0.6, 0]}>
-              <coneGeometry args={[0.22, 1.4, 16, 1, true]} />
-              <meshBasicMaterial
-                color="#e0f2fe"
-                transparent
-                opacity={0.95}
-                blending={THREE.AdditiveBlending}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-
-            {/* Wide, soft translucent blue-violet expansion bell */}
-            <mesh position={[0, -1.8, 0]}>
-              <coneGeometry args={[1.2, 3.8, 24, 1, true]} />
-              <meshBasicMaterial
-                color="#818cf8"
-                transparent
-                opacity={0.45}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-              />
+            {/* GLSL Vacuum Plume Bell */}
+            <mesh position={[0, -1.2, 0]} material={ps4PlumeMat}>
+              <coneGeometry args={[0.8, 2.6, 20, 1, true]} />
             </mesh>
 
             {/* Soft violet outer vacuum bloom */}
-            <mesh position={[0, -2.6, 0]}>
-              <coneGeometry args={[1.9, 5.2, 24, 1, true]} />
+            <mesh position={[0, -2.4, 0]}>
+              <coneGeometry args={[1.8, 5.0, 24, 1, true]} />
               <meshBasicMaterial
                 color="#a855f7"
                 transparent
                 opacity={0.25}
+                blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
               />
@@ -341,7 +377,7 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
             </mesh>
           </group>
         ))}
-        <pointLight color="#67e8f9" intensity={2.2} distance={25} decay={2} />
+        <pointLight color="#67e8f9" intensity={2.5} distance={28} decay={2} />
       </group>
 
       {/* ======================================================== */}

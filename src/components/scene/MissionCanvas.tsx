@@ -29,23 +29,26 @@ function CameraManager({
   isHigh,
   deepSpaceActive,
   missionId,
+  resetCount,
 }: {
   cameraMode: CameraMode;
   isHigh: boolean;
   deepSpaceActive?: boolean;
   missionId?: string;
+  resetCount?: number;
 }) {
   const { camera } = useThree();
-  const prevRef = useRef<{ mode: CameraMode; high: boolean; ds?: boolean } | null>(null);
+  const prevRef = useRef<{ mode: CameraMode; high: boolean; ds?: boolean; reset?: number } | null>(null);
 
   useEffect(() => {
     if (
       !prevRef.current ||
       prevRef.current.mode !== cameraMode ||
       prevRef.current.high !== isHigh ||
-      prevRef.current.ds !== deepSpaceActive
+      prevRef.current.ds !== deepSpaceActive ||
+      prevRef.current.reset !== resetCount
     ) {
-      prevRef.current = { mode: cameraMode, high: isHigh, ds: deepSpaceActive };
+      prevRef.current = { mode: cameraMode, high: isHigh, ds: deepSpaceActive, reset: resetCount };
 
       if (deepSpaceActive) {
         // Deep Space Camera Framing
@@ -67,9 +70,14 @@ function CameraManager({
           camera.position.set(-55, 48, 95);
           camera.lookAt(0, 43, 0);
         }
+      } else if (cameraMode === 'auto') {
+        if (!isHigh) {
+          camera.position.set(-18, 16, 36);
+          camera.lookAt(0, 26, 0);
+        }
       }
     }
-  }, [cameraMode, isHigh, deepSpaceActive, missionId, camera]);
+  }, [cameraMode, isHigh, deepSpaceActive, missionId, resetCount, camera]);
 
   return null;
 }
@@ -87,6 +95,7 @@ export function MissionCanvas({
 }: Props) {
   const [showOrbitBadge, setShowOrbitBadge] = useState(false);
   const [hoveredComponent, setHoveredComponent] = useState<InspectableComponent | null>(null);
+  const [resetCount, setResetCount] = useState<number>(0);
 
   // Independent real-time commissioning timer (0 -> 10s) once ps4Cutoff is true
   const [commissioningTime, setCommissioningTime] = useState<number>(0);
@@ -187,6 +196,7 @@ export function MissionCanvas({
             isHigh={isHigh}
             deepSpaceActive={deepSpaceActive}
             missionId={mission?.id}
+            resetCount={resetCount}
           />
 
           {/* Controls: Enable OrbitControls when in 'orbit' mode or during deep-space phase */}
@@ -197,6 +207,12 @@ export function MissionCanvas({
             maxDistance={deepSpaceActive ? 800 : isHigh ? 400 : 120}
             minDistance={deepSpaceActive ? 40 : isHigh ? 65 : 20}
             target={orbitControlsTarget}
+            onStart={() => {
+              // Seamless switch to Free Cam upon user interaction without fighting camera
+              if (cameraMode !== 'orbit' && onCameraModeChange) {
+                onCameraModeChange('orbit');
+              }
+            }}
           />
 
           {/* ======================================================== */}
@@ -250,6 +266,18 @@ export function MissionCanvas({
             <span className="text-[10px] text-cyan-300">
               Click component to inspect engineering specifications ↗
             </span>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ======================================================== */}
+      {/* DEEP-SPACE SCIENTIFIC SCALE BADGE                        */}
+      {/* ======================================================== */}
+      {deepSpaceActive ? (
+        <div className="absolute top-4 right-4 z-20 pointer-events-none animate-in fade-in">
+          <div className="px-3 py-1.5 rounded-lg bg-slate-950/85 backdrop-blur-md border border-cyan-500/40 text-[11px] font-mono text-cyan-300 shadow-xl flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>🔭 Visual scale compressed for educational study • Ascent Phase = RK4</span>
           </div>
         </div>
       ) : null}
@@ -321,44 +349,49 @@ export function MissionCanvas({
         </div>
       ) : null}
 
-      {/* Camera Mode Selector Pill (Bottom-Left) */}
-      {!deepSpaceActive ? (
-        <div className="absolute bottom-4 left-4 z-10 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 text-xs font-mono shadow-xl">
-          <button
-            onClick={() => onCameraModeChange && onCameraModeChange('auto')}
-            className={`px-3 py-1 rounded transition-colors ${
-              cameraMode === 'auto' || cameraMode === 'pad'
-                ? 'bg-orange-500 text-white font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Cinematic broadcast director camera tracking liftoff to orbit"
-          >
-            Broadcast Cam
-          </button>
-          <button
-            onClick={() => onCameraModeChange && onCameraModeChange('chase')}
-            className={`px-3 py-1 rounded transition-colors ${
-              cameraMode === 'chase'
-                ? 'bg-orange-500 text-white font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Over-the-shoulder chase camera tracking rocket fuselage"
-          >
-            Chase Cam
-          </button>
-          <button
-            onClick={() => onCameraModeChange && onCameraModeChange('orbit')}
-            className={`px-3 py-1 rounded transition-colors ${
-              cameraMode === 'orbit'
-                ? 'bg-sky-500 text-white font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Free OrbitControls camera to rotate around vehicle or Earth"
-          >
-            Free Orbit
-          </button>
-        </div>
-      ) : null}
+      {/* ======================================================== */}
+      {/* CAMERA CONTROL HUD PILL (BOTTOM-LEFT)                    */}
+      {/* ======================================================== */}
+      <div className="absolute bottom-4 left-4 z-10 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-lg p-1 text-xs font-mono shadow-xl gap-1">
+        <button
+          onClick={() => {
+            if (onCameraModeChange) onCameraModeChange('auto');
+          }}
+          className={`px-3 py-1 rounded transition-colors ${
+            cameraMode === 'auto' || cameraMode === 'pad'
+              ? 'bg-orange-500 text-white font-bold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+          title="Cinematic broadcast director camera tracking liftoff to orbit"
+        >
+          🎥 Auto-Cam
+        </button>
+        <button
+          onClick={() => {
+            if (onCameraModeChange) onCameraModeChange('orbit');
+          }}
+          className={`px-3 py-1 rounded transition-colors ${
+            cameraMode === 'orbit'
+              ? 'bg-sky-500 text-white font-bold shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+          title="Free OrbitControls camera: drag/scroll to inspect vehicle or Earth"
+        >
+          🕹️ Free Cam
+        </button>
+        <button
+          onClick={() => {
+            setResetCount((c) => c + 1);
+            if (onCameraModeChange) {
+              onCameraModeChange(isHigh || deepSpaceActive ? 'orbit' : 'auto');
+            }
+          }}
+          className="px-2.5 py-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border border-slate-700/60"
+          title="Reset camera to default framing for the current phase"
+        >
+          ↺ Reset View
+        </button>
+      </div>
     </div>
   );
 }

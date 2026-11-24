@@ -174,6 +174,24 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
   const arm3Ref = useRef<THREE.Group>(null);
   const padTexture = useMemo(() => getProceduralPadTexture(), []);
 
+  // Perimeter Catenary Ground Wire loop between 4 lightning masts
+  const catenaryWire = useMemo(() => {
+    const pts = [
+      new THREE.Vector3(46, 55, 46),
+      new THREE.Vector3(-46, 55, 46),
+      new THREE.Vector3(-46, 55, -46),
+      new THREE.Vector3(46, 55, -46),
+      new THREE.Vector3(46, 55, 46),
+    ];
+    const geom = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.65,
+    });
+    return new THREE.Line(geom, mat);
+  }, []);
+
   // Update floating origin ground displacement
   // DOWNRANGE FIX: downrange_m passed in is surface-relative downrange (Earth-rotation drift subtracted)
   useFrame(() => {
@@ -243,6 +261,28 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
         <boxGeometry args={[24, 3.2, 18]} />
         <meshStandardMaterial color="#0b0f19" roughness={0.95} />
       </mesh>
+
+      {/* Industrial High-Pressure Water Deluge Suppression Pipes & Manifolds */}
+      {[-28, 28].map((tx) => (
+        <group key={`deluge-${tx}`} position={[tx, 1.2, 0]}>
+          {/* Main longitudinal feeder pipe */}
+          <mesh position={[0, 0, 9.5]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.35, 0.35, 24, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0, -9.5]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.35, 0.35, 24, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {/* Deluge high-volume spray nozzles */}
+          {[-8, -4, 0, 4, 8].map((nz) => (
+            <mesh key={nz} position={[nz, -0.2, nz > 0 ? 9.2 : -9.2]}>
+              <cylinderGeometry args={[0.15, 0.22, 0.6, 8]} />
+              <meshStandardMaterial color="#eab308" metalness={0.8} />
+            </mesh>
+          ))}
+        </group>
+      ))}
 
       {/* Scorched Central Flame Deflector Wedge (Inverted V-shape deflector) */}
       <mesh position={[0, 0.5, 0]} rotation={[0, 0, Math.PI / 4]}>
@@ -357,6 +397,9 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
       <LightningTower position={[46, 0, -46]} />
       <LightningTower position={[-46, 0, -46]} />
 
+      {/* Catenary Wire Loop connecting 4 masts */}
+      <primitive object={catenaryWire} />
+
       {/* Floodlights illuminating the launch pad */}
       <pointLight position={[46, 38, 46]} intensity={1.2} color="#fef08a" distance={110} />
       <pointLight position={[-46, 38, 46]} intensity={1.2} color="#fef08a" distance={110} />
@@ -393,6 +436,18 @@ export function SriharikotaGround({ altitude_m, downrange_m, time_s }: Props) {
           metalness={0.5}
           transparent
           opacity={0.88}
+        />
+      </mesh>
+
+      {/* Pulicat Lagoon Inland Estuary (West side) at y = -1.2 */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-900, -1.2, 0]} receiveShadow>
+        <planeGeometry args={[1600, 3200]} />
+        <meshStandardMaterial
+          color="#0f766e"
+          roughness={0.25}
+          metalness={0.35}
+          transparent
+          opacity={0.82}
         />
       </mesh>
 

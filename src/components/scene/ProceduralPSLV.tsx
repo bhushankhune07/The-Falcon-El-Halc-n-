@@ -7,6 +7,8 @@ import {
   getProceduralRocketDecal,
   getProceduralSolarPanelTexture,
   getProceduralRadarTexture,
+  getProceduralFuselagePBRTextures,
+  getProceduralGoldMLITextures,
 } from './textures/proceduralTextures';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from './inspectData';
 
@@ -143,6 +145,18 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
   const decalTexture = useMemo(() => getProceduralRocketDecal(), []);
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
   const radarTexture = useMemo(() => getProceduralRadarTexture(), []);
+  const fuselageTextures = useMemo(() => getProceduralFuselagePBRTextures(), []);
+  const mliTextures = useMemo(() => getProceduralGoldMLITextures(), []);
+
+  useEffect(() => {
+    return () => {
+      fuselageTextures.map.dispose();
+      fuselageTextures.bumpMap.dispose();
+      fuselageTextures.roughnessMap.dispose();
+      mliTextures.bumpMap.dispose();
+      mliTextures.roughnessMap.dispose();
+    };
+  }, [fuselageTextures, mliTextures]);
 
   // Geometry dimensions (1 unit = 1 meter approx, scaled for 3D visibility)
   // Total stack height: ~44 meters
@@ -256,7 +270,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
           {/* Main White Body Cylinder */}
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[coreRadius, coreRadius, ps1Height, 32]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.35}
+              metalness={0.12}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.04}
+              roughnessMap={fuselageTextures.roughnessMap}
+            />
           </mesh>
 
           {/* External Cable Raceway Conduit */}
@@ -345,8 +366,11 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               <cylinderGeometry args={[straponRadius, straponRadius, straponHeight, 20]} />
               <meshStandardMaterial
                 color={isGround ? '#ffffff' : '#f1f5f9'}
-                roughness={0.35}
+                roughness={0.38}
                 metalness={0.15}
+                bumpMap={fuselageTextures.bumpMap}
+                bumpScale={0.04}
+                roughnessMap={fuselageTextures.roughnessMap}
               />
             </mesh>
 
@@ -430,7 +454,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
           {/* Liquid Propellant Tank (UH25 + N2O4) */}
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[coreRadius, coreRadius, ps2Height, 32]} />
-            <meshStandardMaterial color="#b45309" roughness={0.45} metalness={0.5} />
+            <meshStandardMaterial
+              color="#b45309"
+              roughness={0.45}
+              metalness={0.5}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.04}
+              roughnessMap={fuselageTextures.roughnessMap}
+            />
           </mesh>
 
           {/* External Cable Raceway Conduit */}
@@ -471,7 +502,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
           {/* Carbon/Kevlar Filament Wound Case */}
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[1.0, 1.0, ps3Height, 28]} />
-            <meshStandardMaterial color="#1f2937" roughness={0.7} metalness={0.2} />
+            <meshStandardMaterial
+              color="#1f2937"
+              roughness={0.65}
+              metalness={0.25}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.04}
+              roughnessMap={fuselageTextures.roughnessMap}
+            />
           </mesh>
 
           {/* Submerged Parabolic Flex Nozzle */}
@@ -499,7 +537,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
         {/* Upper Stage Equipment Bay & Tanks */}
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[coreRadius * 0.75, coreRadius * 0.75, ps4Height, 28]} />
-          <meshStandardMaterial color="#e2e8f0" roughness={0.3} metalness={0.4} />
+          <meshStandardMaterial
+            color="#e2e8f0"
+            roughness={0.32}
+            metalness={0.4}
+            bumpMap={fuselageTextures.bumpMap}
+            bumpScale={0.04}
+            roughnessMap={fuselageTextures.roughnessMap}
+          />
         </mesh>
 
         {/* Spherical Titanium Fuel Tanks */}
@@ -546,7 +591,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
           onPointerOut={handlePointerOut}
         >
           <boxGeometry args={[1.6, 2.2, 1.6]} />
-          <meshStandardMaterial color="#eab308" metalness={0.85} roughness={0.25} />
+          <meshStandardMaterial
+            color="#d4a017"
+            metalness={0.92}
+            roughness={0.28}
+            bumpMap={mliTextures.bumpMap}
+            bumpScale={0.06}
+            roughnessMap={mliTextures.roughnessMap}
+          />
         </mesh>
 
         {/* Deployable Solar Panel Array (Left Wing) */}
@@ -638,7 +690,15 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <cylinderGeometry
               args={[coreRadius + 0.1, coreRadius + 0.1, fairingHeight * 0.7, 32, 1, false, 0, Math.PI]}
             />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.32}
+              metalness={0.12}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.03}
+              roughnessMap={fuselageTextures.roughnessMap}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Inner Acoustic Soundproofing Foam Layer */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>
@@ -653,7 +713,15 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <coneGeometry
               args={[coreRadius + 0.1, fairingHeight * 0.3, 32, 1, false, 0, Math.PI]}
             />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.32}
+              metalness={0.12}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.03}
+              roughnessMap={fuselageTextures.roughnessMap}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Inner Nosecone Acoustic Layer */}
           <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>
@@ -679,7 +747,15 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <cylinderGeometry
               args={[coreRadius + 0.1, coreRadius + 0.1, fairingHeight * 0.7, 32, 1, false, Math.PI, Math.PI]}
             />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.32}
+              metalness={0.12}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.03}
+              roughnessMap={fuselageTextures.roughnessMap}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Inner Acoustic Soundproofing Foam Layer */}
           <mesh position={[0, fairingHeight * 0.35, 0]}>
@@ -694,7 +770,15 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <coneGeometry
               args={[coreRadius + 0.1, fairingHeight * 0.3, 32, 1, false, Math.PI, Math.PI]}
             />
-            <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.1} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.32}
+              metalness={0.12}
+              bumpMap={fuselageTextures.bumpMap}
+              bumpScale={0.03}
+              roughnessMap={fuselageTextures.roughnessMap}
+              side={THREE.DoubleSide}
+            />
           </mesh>
           {/* Inner Nosecone Acoustic Layer */}
           <mesh position={[0, fairingHeight * 0.7 + fairingHeight * 0.15, 0]}>

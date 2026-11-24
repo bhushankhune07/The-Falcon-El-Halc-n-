@@ -20,10 +20,13 @@ import { SimFrameState } from '../scene/types';
 import { ProceduralPSLV } from '../scene/ProceduralPSLV';
 import { ScaledEarth } from '../scene/ScaledEarth';
 import {
-  getProceduralMarsTexture,
-  getProceduralSunTexture,
-  getProceduralSolarPanelTexture,
-  getProceduralRadarTexture,
+  EOS04Spacecraft,
+  MOMSpacecraft,
+  AdityaL1Spacecraft,
+} from '../scene/ProceduralSpacecraft';
+import {
+  getProceduralMarsPBRTextures,
+  createSunShaderMaterial,
 } from '../scene/textures/proceduralTextures';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from '../scene/inspectData';
 
@@ -718,15 +721,16 @@ function StudioModelRenderer({
   onSelectComponent: (comp: InspectableComponent) => void;
   onHoverComponent: (comp: InspectableComponent | null) => void;
 }) {
-  const marsTexture = useMemo(() => getProceduralMarsTexture(), []);
-  const sunTexture = useMemo(() => getProceduralSunTexture(), []);
-  const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
-  const radarTexture = useMemo(() => getProceduralRadarTexture(), []);
+  const marsPBR = useMemo(() => getProceduralMarsPBRTextures(), []);
+  const sunMaterial = useMemo(() => createSunShaderMaterial(), []);
 
   const sunGroupRef = useRef<THREE.Group>(null);
   const marsGroupRef = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
+    if (sunMaterial.uniforms?.uTime) {
+      sunMaterial.uniforms.uTime.value += delta;
+    }
     if (sunGroupRef.current) {
       sunGroupRef.current.rotation.y += delta * 0.05;
     }
@@ -734,26 +738,6 @@ function StudioModelRenderer({
       marsGroupRef.current.rotation.y += delta * 0.08;
     }
   });
-
-  const handlePointerOver = (e: { stopPropagation: () => void }, compId: string) => {
-    e.stopPropagation();
-    document.body.style.cursor = 'pointer';
-    if (INSPECTABLE_COMPONENTS[compId]) {
-      onHoverComponent(INSPECTABLE_COMPONENTS[compId]);
-    }
-  };
-
-  const handlePointerOut = () => {
-    document.body.style.cursor = 'auto';
-    onHoverComponent(null);
-  };
-
-  const handleClick = (e: { stopPropagation: () => void }, compId: string) => {
-    e.stopPropagation();
-    if (INSPECTABLE_COMPONENTS[compId]) {
-      onSelectComponent(INSPECTABLE_COMPONENTS[compId]);
-    }
-  };
 
   if (modelId === 'pslv_xl') {
     return (
@@ -770,250 +754,39 @@ function StudioModelRenderer({
 
   if (modelId === 'eos04') {
     return (
-      <group position={[0, 0, 0]}>
-        {/* EOS-04 Spacecraft Bus */}
-        <mesh
-          onClick={(e) => handleClick(e, 'eos04_bus')}
-          onPointerOver={(e) => handlePointerOver(e, 'eos04_bus')}
-          onPointerOut={handlePointerOut}
-        >
-          <boxGeometry args={[3.2, 3.2, 4.4]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#f59e0b'}
-            metalness={blueprintMode ? 0.2 : 0.85}
-            roughness={0.25}
-            wireframe={blueprintMode}
-            emissive={blueprintMode ? '#00f0ff' : '#000000'}
-            emissiveIntensity={blueprintMode ? 0.3 : 0}
-          />
-        </mesh>
-
-        {/* Dual Deployable Solar Wings */}
-        <group
-          position={[0, 0, 0]}
-          onClick={(e) => handleClick(e, 'eos04_solar')}
-          onPointerOver={(e) => handlePointerOver(e, 'eos04_solar')}
-          onPointerOut={handlePointerOut}
-        >
-          {/* Wing +X */}
-          <mesh position={[6.2, 0, 0]}>
-            <boxGeometry args={[8.8, 2.6, 0.08]} />
-            <meshStandardMaterial
-              map={blueprintMode ? null : solarTexture}
-              color={blueprintMode ? '#00f0ff' : '#0284c7'}
-              metalness={0.6}
-              roughness={0.3}
-              wireframe={blueprintMode}
-              emissive={blueprintMode ? '#00f0ff' : '#000000'}
-            />
-          </mesh>
-          {/* Wing -X */}
-          <mesh position={[-6.2, 0, 0]}>
-            <boxGeometry args={[8.8, 2.6, 0.08]} />
-            <meshStandardMaterial
-              map={blueprintMode ? null : solarTexture}
-              color={blueprintMode ? '#00f0ff' : '#0284c7'}
-              metalness={0.6}
-              roughness={0.3}
-              wireframe={blueprintMode}
-              emissive={blueprintMode ? '#00f0ff' : '#000000'}
-            />
-          </mesh>
-        </group>
-
-        {/* C-band SAR Planar Antenna */}
-        <group
-          position={[0, -2.4, 1.8]}
-          rotation={[0.35, 0, 0]}
-          onClick={(e) => handleClick(e, 'eos04_sar')}
-          onPointerOver={(e) => handlePointerOver(e, 'eos04_sar')}
-          onPointerOut={handlePointerOut}
-        >
-          <mesh>
-            <boxGeometry args={[8.4, 2.4, 0.16]} />
-            <meshStandardMaterial
-              map={blueprintMode ? null : radarTexture}
-              color={blueprintMode ? '#00f0ff' : '#f8fafc'}
-              metalness={0.7}
-              roughness={0.35}
-              wireframe={blueprintMode}
-              emissive={blueprintMode ? '#00f0ff' : '#000000'}
-            />
-          </mesh>
-        </group>
-
-        {/* X-band Telemetry Downlink Dish */}
-        <mesh position={[0, 2.2, 0]}>
-          <coneGeometry args={[0.7, 0.4, 16, 1, true]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#cbd5e1'}
-            metalness={0.8}
-            wireframe={blueprintMode}
-          />
-        </mesh>
+      <group position={[0, 0, 0]} scale={[2.6, 2.6, 2.6]}>
+        <EOS04Spacecraft
+          blueprintMode={blueprintMode}
+          inspectData={INSPECTABLE_COMPONENTS}
+          onSelectComponent={onSelectComponent}
+          onHoverComponent={onHoverComponent}
+        />
       </group>
     );
   }
 
   if (modelId === 'mom') {
     return (
-      <group position={[0, 0, 0]}>
-        {/* Mangalyaan Spacecraft Bus */}
-        <mesh
-          onClick={(e) => handleClick(e, 'mom_mcc')}
-          onPointerOver={(e) => handlePointerOver(e, 'mom_mcc')}
-          onPointerOut={handlePointerOut}
-        >
-          <boxGeometry args={[3.2, 3.2, 3.4]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#eab308'}
-            metalness={blueprintMode ? 0.2 : 0.8}
-            roughness={0.25}
-            wireframe={blueprintMode}
-            emissive={blueprintMode ? '#00f0ff' : '#000000'}
-          />
-        </mesh>
-
-        {/* 1.4m Parabolic High Gain Antenna Dish */}
-        <group
-          position={[0, 2.4, 0]}
-          onClick={(e) => handleClick(e, 'mom_hga')}
-          onPointerOver={(e) => handlePointerOver(e, 'mom_hga')}
-          onPointerOut={handlePointerOut}
-        >
-          <mesh rotation={[0.4, 0, 0]}>
-            <sphereGeometry args={[1.5, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
-            <meshStandardMaterial
-              color={blueprintMode ? '#00f0ff' : '#f8fafc'}
-              metalness={0.8}
-              roughness={0.3}
-              side={THREE.DoubleSide}
-              wireframe={blueprintMode}
-            />
-          </mesh>
-        </group>
-
-        {/* Mars Colour Camera (MCC) Lens */}
-        <mesh
-          position={[0, -0.6, 1.8]}
-          rotation={[Math.PI / 2, 0, 0]}
-          onClick={(e) => handleClick(e, 'mom_mcc')}
-          onPointerOver={(e) => handlePointerOver(e, 'mom_mcc')}
-          onPointerOut={handlePointerOut}
-        >
-          <cylinderGeometry args={[0.3, 0.4, 0.8, 16]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#1e293b'}
-            metalness={0.9}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* 440N Liquid Apogee Motor Nozzle */}
-        <mesh
-          position={[0, 0, -1.9]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          onClick={(e) => handleClick(e, 'mom_lam')}
-          onPointerOver={(e) => handlePointerOver(e, 'mom_lam')}
-          onPointerOut={handlePointerOut}
-        >
-          <coneGeometry args={[0.5, 0.9, 16, 1, true]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#334155'}
-            metalness={0.8}
-            side={THREE.DoubleSide}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* Tri-panel Solar Array */}
-        <mesh position={[5.4, 0, 0]}>
-          <boxGeometry args={[7.2, 2.6, 0.08]} />
-          <meshStandardMaterial
-            map={blueprintMode ? null : solarTexture}
-            color={blueprintMode ? '#00f0ff' : '#0284c7'}
-            metalness={0.6}
-            wireframe={blueprintMode}
-          />
-        </mesh>
+      <group position={[0, 0, 0]} scale={[2.8, 2.8, 2.8]}>
+        <MOMSpacecraft
+          blueprintMode={blueprintMode}
+          inspectData={INSPECTABLE_COMPONENTS}
+          onSelectComponent={onSelectComponent}
+          onHoverComponent={onHoverComponent}
+        />
       </group>
     );
   }
 
   if (modelId === 'aditya') {
     return (
-      <group position={[0, 0, 0]}>
-        {/* Hexagonal Bus Structure */}
-        <mesh
-          onClick={(e) => handleClick(e, 'aditya_velc')}
-          onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
-          onPointerOut={handlePointerOut}
-        >
-          <cylinderGeometry args={[2.2, 2.2, 3.8, 6]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#eab308'}
-            metalness={blueprintMode ? 0.2 : 0.85}
-            roughness={0.25}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* VELC Solar Coronagraph Aperture Tube */}
-        <mesh
-          position={[0, 2.6, 0]}
-          onClick={(e) => handleClick(e, 'aditya_velc')}
-          onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
-          onPointerOut={handlePointerOut}
-        >
-          <cylinderGeometry args={[0.7, 0.7, 1.8, 20]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#0f172a'}
-            metalness={0.8}
-            roughness={0.3}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* SUIT UV Telescope Tube */}
-        <mesh
-          position={[1.2, 2.3, 0.8]}
-          onClick={(e) => handleClick(e, 'aditya_suit')}
-          onPointerOver={(e) => handlePointerOver(e, 'aditya_suit')}
-          onPointerOut={handlePointerOut}
-        >
-          <cylinderGeometry args={[0.35, 0.35, 1.4, 16]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#38bdf8'}
-            metalness={0.7}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* ASPEX Solar Wind Analyzer Pod */}
-        <mesh
-          position={[-1.4, 0, 1.2]}
-          onClick={(e) => handleClick(e, 'aditya_aspex')}
-          onPointerOver={(e) => handlePointerOver(e, 'aditya_aspex')}
-          onPointerOut={handlePointerOut}
-        >
-          <boxGeometry args={[0.6, 0.8, 0.6]} />
-          <meshStandardMaterial
-            color={blueprintMode ? '#00f0ff' : '#cbd5e1'}
-            metalness={0.7}
-            wireframe={blueprintMode}
-          />
-        </mesh>
-
-        {/* Dual Solar Arrays */}
-        <mesh position={[6.0, 0, 0]}>
-          <boxGeometry args={[7.2, 2.4, 0.08]} />
-          <meshStandardMaterial
-            map={blueprintMode ? null : solarTexture}
-            color={blueprintMode ? '#00f0ff' : '#0284c7'}
-            metalness={0.6}
-            wireframe={blueprintMode}
-          />
-        </mesh>
+      <group position={[0, 0, 0]} scale={[2.6, 2.6, 2.6]}>
+        <AdityaL1Spacecraft
+          blueprintMode={blueprintMode}
+          inspectData={INSPECTABLE_COMPONENTS}
+          onSelectComponent={onSelectComponent}
+          onHoverComponent={onHoverComponent}
+        />
       </group>
     );
   }
@@ -1030,23 +803,30 @@ function StudioModelRenderer({
     return (
       <group ref={marsGroupRef} position={[0, 0, 0]}>
         <mesh>
-          <sphereGeometry args={[9.0, 48, 48]} />
-          <meshStandardMaterial
-            map={blueprintMode ? null : marsTexture}
-            color={blueprintMode ? '#00f0ff' : '#ffffff'}
-            roughness={0.75}
-            metalness={0.15}
-            wireframe={blueprintMode}
-          />
+          <sphereGeometry args={[9.0, 64, 48]} />
+          {blueprintMode ? (
+            <meshStandardMaterial wireframe color="#00f0ff" />
+          ) : (
+            <meshStandardMaterial
+              map={marsPBR.map}
+              bumpMap={marsPBR.bumpMap}
+              bumpScale={0.16}
+              roughnessMap={marsPBR.roughnessMap}
+              roughness={0.78}
+              metalness={0.06}
+            />
+          )}
         </mesh>
         {/* Subtle Martian atmospheric limb */}
         <mesh>
-          <sphereGeometry args={[9.25, 32, 32]} />
+          <sphereGeometry args={[9.3, 36, 28]} />
           <meshBasicMaterial
             color="#f97316"
             transparent
-            opacity={0.15}
+            opacity={0.22}
             side={THREE.BackSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
           />
         </mesh>
       </group>
@@ -1056,25 +836,23 @@ function StudioModelRenderer({
   if (modelId === 'sun') {
     return (
       <group ref={sunGroupRef} position={[0, 0, 0]}>
-        <mesh>
-          <sphereGeometry args={[11.0, 48, 48]} />
-          <meshBasicMaterial
-            map={blueprintMode ? null : sunTexture}
-            color={blueprintMode ? '#00f0ff' : '#fbbf24'}
-            wireframe={blueprintMode}
-          />
+        <mesh material={blueprintMode ? undefined : sunMaterial}>
+          <sphereGeometry args={[11.0, 64, 48]} />
+          {blueprintMode && <meshStandardMaterial wireframe color="#00f0ff" />}
         </mesh>
         {/* Pulsating solar corona shell */}
         <mesh>
-          <sphereGeometry args={[12.8, 32, 32]} />
+          <sphereGeometry args={[13.2, 36, 28]} />
           <meshBasicMaterial
-            color="#f59e0b"
+            color="#fde047"
             transparent
-            opacity={0.25}
+            opacity={0.35}
+            blending={THREE.AdditiveBlending}
             side={THREE.BackSide}
+            depthWrite={false}
           />
         </mesh>
-        <pointLight color="#fbbf24" intensity={4.5} distance={120} decay={2} />
+        <pointLight color="#fef08a" intensity={4.8} distance={140} decay={2} />
       </group>
     );
   }
