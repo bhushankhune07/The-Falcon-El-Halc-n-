@@ -258,9 +258,20 @@ export function LaunchView({
           {/* Top-Center Flight Director Live Mission Callout Ticker */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 max-w-[90%] sm:max-w-md pointer-events-none">
             {deepSpaceActive ? (
-              <div className="px-3.5 py-1.5 rounded-full bg-purple-950/90 backdrop-blur-md border border-purple-500/60 shadow-xl shadow-purple-950/50 text-xs font-mono font-bold text-purple-200 text-center">
-                SCHEMATIC INTERPLANETARY TRANSFER PHASE (Post-EPO Keplerian Visualization — Ascent Phase = RK4)
-              </div>
+              deepSpacePhase >= 0.72 && deepSpacePhase <= 0.84 ? (
+                <div className="px-4 py-2 rounded-full bg-amber-950/95 backdrop-blur-md border border-amber-500/80 shadow-2xl shadow-amber-950/60 text-xs font-mono font-bold text-amber-200 text-center animate-pulse flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping flex-none" />
+                  <span>
+                    {mission.id === 'pslv-c25-mom'
+                      ? 'MOI Retro-Burn: 440N LAM (-1,099 m/s)'
+                      : 'HOI Braking Burn: 440N LAM'}
+                  </span>
+                </div>
+              ) : (
+                <div className="px-3.5 py-1.5 rounded-full bg-purple-950/90 backdrop-blur-md border border-purple-500/60 shadow-xl shadow-purple-950/50 text-xs font-mono font-bold text-purple-200 text-center">
+                  SCHEMATIC INTERPLANETARY TRANSFER PHASE (Post-EPO Keplerian Visualization — Ascent Phase = RK4)
+                </div>
+              )
             ) : (
               <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-cyan-500/40 shadow-xl shadow-cyan-950/40 text-xs font-mono">
                 <span className="relative flex h-2 w-2 flex-none">
@@ -434,32 +445,42 @@ export function LaunchView({
                 <button
                   onClick={() => setDeepSpacePhase(0.15)}
                   className={`px-2 py-0.5 rounded border transition-colors ${
-                    deepSpacePhase < 0.33
+                    deepSpacePhase < 0.30
                       ? 'bg-purple-600 border-purple-400 text-white font-bold'
                       : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
                   }`}
                 >
-                  1: {mission.id === 'pslv-c25-mom' ? 'Earth Departure' : 'Earth Departure'}
+                  1: Phasing Loops
                 </button>
                 <button
-                  onClick={() => setDeepSpacePhase(0.5)}
+                  onClick={() => setDeepSpacePhase(0.55)}
                   className={`px-2 py-0.5 rounded border transition-colors ${
-                    deepSpacePhase >= 0.33 && deepSpacePhase < 0.67
+                    deepSpacePhase >= 0.30 && deepSpacePhase < 0.72
                       ? 'bg-purple-600 border-purple-400 text-white font-bold'
                       : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
                   }`}
                 >
-                  2: {mission.id === 'pslv-c25-mom' ? 'Heliocentric Cruise' : 'Trans-L1 Transfer'}
+                  2: {mission.id === 'pslv-c25-mom' ? 'Heliocentric Cruise' : 'Trans-L1 Cruise'}
                 </button>
                 <button
-                  onClick={() => setDeepSpacePhase(0.85)}
+                  onClick={() => setDeepSpacePhase(0.78)}
                   className={`px-2 py-0.5 rounded border transition-colors ${
-                    deepSpacePhase >= 0.67
+                    deepSpacePhase >= 0.72 && deepSpacePhase <= 0.84
+                      ? 'bg-amber-600 border-amber-400 text-white font-bold animate-pulse'
+                      : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
+                  }`}
+                >
+                  3: {mission.id === 'pslv-c25-mom' ? 'MOI Retro-Burn' : 'HOI Braking Burn'}
+                </button>
+                <button
+                  onClick={() => setDeepSpacePhase(0.92)}
+                  className={`px-2 py-0.5 rounded border transition-colors ${
+                    deepSpacePhase > 0.84
                       ? 'bg-purple-600 border-purple-400 text-white font-bold'
                       : 'border-purple-900 text-purple-300 hover:bg-purple-900/50'
                   }`}
                 >
-                  3: {mission.id === 'pslv-c25-mom' ? 'Mars Insertion (MOI)' : 'L1 Halo Orbit'}
+                  4: {mission.id === 'pslv-c25-mom' ? 'Mars Capture' : 'L1 Halo Orbit'}
                 </button>
               </div>
 

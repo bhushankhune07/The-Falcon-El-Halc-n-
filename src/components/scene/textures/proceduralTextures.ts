@@ -25,6 +25,11 @@ let cachedFuselageMap: THREE.CanvasTexture | null = null;
 let cachedFuselageBump: THREE.CanvasTexture | null = null;
 let cachedFuselageRoughness: THREE.CanvasTexture | null = null;
 
+let cachedCleanroomFloorMap: THREE.CanvasTexture | null = null;
+let cachedCleanroomFloorBump: THREE.CanvasTexture | null = null;
+let cachedCleanroomFloorRoughness: THREE.CanvasTexture | null = null;
+let cachedHazardStripeMap: THREE.CanvasTexture | null = null;
+
 /**
  * High-Resolution Planetary PBR Texture Sets loaded from local /textures/...
  */
@@ -550,6 +555,10 @@ export function createSunShaderMaterial(): THREE.ShaderMaterial {
     },
     vertexShader,
     fragmentShader,
+    transparent: false,
+    depthWrite: true,
+    depthTest: true,
+    side: THREE.FrontSide,
   });
 }
 
@@ -606,6 +615,7 @@ export function createSunCoronaShaderMaterial(
     blending: THREE.AdditiveBlending,
     side: THREE.BackSide,
     depthWrite: false,
+    depthTest: true,
   });
 }
 
@@ -718,4 +728,151 @@ export function createRocketPlumeShaderMaterial(
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
+}
+
+/**
+ * Procedural Cleanroom & Vehicle Assembly High-Bay Showroom Textures
+ */
+export function getProceduralCleanroomTextures() {
+  if (
+    cachedCleanroomFloorMap &&
+    cachedCleanroomFloorBump &&
+    cachedCleanroomFloorRoughness &&
+    cachedHazardStripeMap
+  ) {
+    return {
+      floorMap: cachedCleanroomFloorMap,
+      floorBump: cachedCleanroomFloorBump,
+      floorRoughness: cachedCleanroomFloorRoughness,
+      hazardMap: cachedHazardStripeMap,
+    };
+  }
+
+  // 1. Epoxy Tiled Floor Diffuse Map
+  const size = 1024;
+  const fCanvas = document.createElement('canvas');
+  fCanvas.width = size;
+  fCanvas.height = size;
+  const fCtx = fCanvas.getContext('2d')!;
+
+  // Base industrial light grey epoxy
+  fCtx.fillStyle = '#cbd5e1';
+  fCtx.fillRect(0, 0, size, size);
+
+  // Subtle cleanroom tile grid lines
+  const tileSize = 128;
+  fCtx.strokeStyle = '#94a3b8';
+  fCtx.lineWidth = 3;
+  for (let x = 0; x <= size; x += tileSize) {
+    fCtx.beginPath();
+    fCtx.moveTo(x, 0);
+    fCtx.lineTo(x, size);
+    fCtx.stroke();
+  }
+  for (let y = 0; y <= size; y += tileSize) {
+    fCtx.beginPath();
+    fCtx.moveTo(0, y);
+    fCtx.lineTo(size, y);
+    fCtx.stroke();
+  }
+
+  // Subtle marble / epoxy coat flecks
+  for (let i = 0; i < 300; i++) {
+    const fx = Math.random() * size;
+    const fy = Math.random() * size;
+    fCtx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.25)' : 'rgba(148,163,184,0.18)';
+    fCtx.fillRect(fx, fy, 4 + Math.random() * 4, 4 + Math.random() * 4);
+  }
+
+  const fMap = new THREE.CanvasTexture(fCanvas);
+  fMap.wrapS = THREE.RepeatWrapping;
+  fMap.wrapT = THREE.RepeatWrapping;
+  fMap.repeat.set(6, 6);
+  cachedCleanroomFloorMap = fMap;
+
+  // 2. Tile Grout Bump Map
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = size;
+  bCanvas.height = size;
+  const bCtx = bCanvas.getContext('2d')!;
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, size, size);
+  bCtx.strokeStyle = '#202020';
+  bCtx.lineWidth = 4;
+  for (let x = 0; x <= size; x += tileSize) {
+    bCtx.beginPath();
+    bCtx.moveTo(x, 0);
+    bCtx.lineTo(x, size);
+    bCtx.stroke();
+  }
+  for (let y = 0; y <= size; y += tileSize) {
+    bCtx.beginPath();
+    bCtx.moveTo(0, y);
+    bCtx.lineTo(size, y);
+    bCtx.stroke();
+  }
+  const fBump = new THREE.CanvasTexture(bCanvas);
+  fBump.wrapS = THREE.RepeatWrapping;
+  fBump.wrapT = THREE.RepeatWrapping;
+  fBump.repeat.set(6, 6);
+  cachedCleanroomFloorBump = fBump;
+
+  // 3. Epoxy Specular / Roughness Map (Glossy epoxy with matte seams)
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = size;
+  rCanvas.height = size;
+  const rCtx = rCanvas.getContext('2d')!;
+  rCtx.fillStyle = '#383838'; // glossy (roughness ~ 0.22)
+  rCtx.fillRect(0, 0, size, size);
+  rCtx.strokeStyle = '#909090'; // rougher seams
+  rCtx.lineWidth = 4;
+  for (let x = 0; x <= size; x += tileSize) {
+    rCtx.beginPath();
+    rCtx.moveTo(x, 0);
+    rCtx.lineTo(x, size);
+    rCtx.stroke();
+  }
+  for (let y = 0; y <= size; y += tileSize) {
+    rCtx.beginPath();
+    rCtx.moveTo(0, y);
+    rCtx.lineTo(size, y);
+    rCtx.stroke();
+  }
+  const fRough = new THREE.CanvasTexture(rCanvas);
+  fRough.wrapS = THREE.RepeatWrapping;
+  fRough.wrapT = THREE.RepeatWrapping;
+  fRough.repeat.set(6, 6);
+  cachedCleanroomFloorRoughness = fRough;
+
+  // 4. Yellow-Black Hazard Safety Warning Stripes
+  const hSize = 512;
+  const hCanvas = document.createElement('canvas');
+  hCanvas.width = hSize;
+  hCanvas.height = hSize;
+  const hCtx = hCanvas.getContext('2d')!;
+  hCtx.fillStyle = '#0f172a'; // black
+  hCtx.fillRect(0, 0, hSize, hSize);
+  hCtx.fillStyle = '#eab308'; // caution yellow
+  const stripeWidth = 64;
+  for (let d = -hSize; d < hSize * 2; d += stripeWidth * 2) {
+    hCtx.beginPath();
+    hCtx.moveTo(d, 0);
+    hCtx.lineTo(d + stripeWidth, 0);
+    hCtx.lineTo(d + stripeWidth - hSize, hSize);
+    hCtx.lineTo(d - hSize, hSize);
+    hCtx.closePath();
+    hCtx.fill();
+  }
+  const hMap = new THREE.CanvasTexture(hCanvas);
+  hMap.wrapS = THREE.RepeatWrapping;
+  hMap.wrapT = THREE.RepeatWrapping;
+  hMap.repeat.set(8, 1);
+  cachedHazardStripeMap = hMap;
+
+  return {
+    floorMap: fMap,
+    floorBump: fBump,
+    floorRoughness: fRough,
+    hazardMap: hMap,
+  };
 }

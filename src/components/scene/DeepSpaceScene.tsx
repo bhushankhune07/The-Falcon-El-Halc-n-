@@ -77,33 +77,12 @@ export function DeepSpaceScene({
     // 4. Spacecraft position and attitude tracking (Mathematically C0-continuous)
     if (probeGroupRef.current) {
       if (isMOM) {
-        if (phaseProgress < 0.10) {
+        if (phaseProgress < 0.30) {
           // ==========================================
-          // PHASE 1: Earth Launch Injection Arc (0% - 10%)
+          // PHASE 1: Earth-bound Apogee Raising Phasing Loops (0% - 30%)
+          // 5 Expanding Phasing Loops with 440N LAM perigee burns
           // ==========================================
-          const tau = phaseProgress / 0.10;
-          const p0X = earthCenter.x + 36;
-          const p0Y = earthCenter.y - 12;
-          const p0Z = earthCenter.z - 18;
-          const injX = earthCenter.x + 35.7;
-          const injY = earthCenter.y;
-          const injZ = earthCenter.z;
-
-          const posX = p0X + tau * (injX - p0X);
-          const posY = p0Y + Math.sin(tau * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tau * Math.PI) * 6;
-          const posZ = p0Z + tau * (injZ - p0Z);
-          probeGroupRef.current.position.set(posX, posY, posZ);
-
-          const tauNext = Math.min(1.0, tau + 0.02);
-          const nextX = p0X + tauNext * (injX - p0X);
-          const nextY = p0Y + Math.sin(tauNext * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tauNext * Math.PI) * 6;
-          const nextZ = p0Z + tauNext * (injZ - p0Z);
-          probeGroupRef.current.lookAt(nextX, nextY, nextZ);
-        } else if (phaseProgress < 0.40) {
-          // ==========================================
-          // PHASE 2: Earth-bound Apogee Raising Loops (10% - 40%)
-          // ==========================================
-          const u = (phaseProgress - 0.10) / 0.30; // 0 to 1
+          const u = phaseProgress / 0.30; // 0 to 1
           const loopCount = 5;
           const currentLoop = u * loopCount;
           const loopFraction = currentLoop % 1.0;
@@ -124,36 +103,102 @@ export function DeepSpaceScene({
           const nextY = earthCenter.y + Math.sin(nextTheta) * (4 + loopIndex * 1.8);
           const nextZ = earthCenter.z + b * Math.sin(nextTheta);
           probeGroupRef.current.lookAt(nextX, nextY, nextZ);
-        } else if (phaseProgress < 0.80) {
+        } else if (phaseProgress < 0.40) {
           // ==========================================
-          // PHASE 3: Heliocentric Hohmann Transfer (40% - 80%)
+          // PHASE 2: Trans-Mars Injection (TMI) Departure Burn (30% - 40%)
+          // Hyperbolic escape burn injecting probe into interplanetary space
           // ==========================================
-          const w = (phaseProgress - 0.40) / 0.40; // 0 to 1
+          const tau = (phaseProgress - 0.30) / 0.10; // 0 to 1
           const startX = earthCenter.x + 30.34;
+          const startY = 0;
           const startZ = earthCenter.z;
-          const endX = marsRendezvous.x + 50;
+          const endX = earthCenter.x + 65.0;
+          const endY = Math.sin(0.12 * Math.PI) * 48;
+          const endZ = earthCenter.z - Math.sin(0.12 * Math.PI) * 32;
+
+          const posX = startX + tau * (endX - startX);
+          const posY = startY + tau * (endY - startY) + Math.sin(tau * Math.PI) * 4.5;
+          const posZ = startZ + tau * (endZ - startZ);
+          probeGroupRef.current.position.set(posX, posY, posZ);
+
+          const tauNext = Math.min(1.0, tau + 0.02);
+          const nextX = startX + tauNext * (endX - startX);
+          const nextY = startY + tauNext * (endY - startY) + Math.sin(tauNext * Math.PI) * 4.5;
+          const nextZ = startZ + tauNext * (endZ - startZ);
+          probeGroupRef.current.lookAt(nextX, nextY, nextZ);
+        } else if (phaseProgress < 0.72) {
+          // ==========================================
+          // PHASE 3: Heliocentric Hohmann Transfer Cruise & TCM (40% - 72%)
+          // ==========================================
+          const w = (phaseProgress - 0.40) / 0.32; // 0 to 1
+          const startX = earthCenter.x + 65.0;
+          const startZ = earthCenter.z;
+          const endX = marsRendezvous.x + 45;
           const endZ = marsRendezvous.z;
 
+          const progressFrac = 0.12 + w * 0.88;
           const posX = startX + w * (endX - startX);
-          const posY = Math.sin(w * Math.PI) * 48;
-          const posZ = startZ + w * (endZ - startZ) - Math.sin(w * Math.PI) * 32;
+          const posY = Math.sin(progressFrac * Math.PI) * 48;
+          const posZ = startZ + w * (endZ - startZ) - Math.sin(progressFrac * Math.PI) * 32;
           probeGroupRef.current.position.set(posX, posY, posZ);
 
           const wNext = Math.min(1.0, w + 0.015);
+          const nextFrac = 0.12 + wNext * 0.88;
           const nextX = startX + wNext * (endX - startX);
-          const nextY = Math.sin(wNext * Math.PI) * 48;
-          const nextZ = startZ + wNext * (endZ - startZ) - Math.sin(wNext * Math.PI) * 32;
+          const nextY = Math.sin(nextFrac * Math.PI) * 48;
+          const nextZ = startZ + wNext * (endZ - startZ) - Math.sin(nextFrac * Math.PI) * 32;
           probeGroupRef.current.lookAt(nextX, nextY, nextZ);
-        } else {
+        } else if (phaseProgress < 0.84) {
           // ==========================================
-          // PHASE 4: Mars Capture Orbit (80% - 100%)
+          // PHASE 4: Mars Orbit Insertion (MOI) Retro-Burn (72% - 84%)
+          // Spacecraft flips 180° retrograde to fire 440N LAM (-1,099 m/s)
           // ==========================================
-          const s = (phaseProgress - 0.80) / 0.20; // 0 to 1
+          const v = (phaseProgress - 0.72) / 0.12; // 0 to 1
+          const curMars = marsGroupRef.current ? marsGroupRef.current.position : marsRendezvous;
           const a = 71.0;
           const c = 21.0;
           const b = 67.82;
           const tilt = 0.52;
-          const theta = s * Math.PI * 6; // 3 revolutions
+          const theta = v * Math.PI * 0.75;
+
+          const orbX = a * Math.cos(theta) - c + (1.0 - v) * 24.0;
+          const orbZ = b * Math.sin(theta) + (1.0 - v) * 14.0;
+          const rotY = orbZ * Math.sin(tilt);
+          const rotZ = orbZ * Math.cos(tilt);
+
+          probeGroupRef.current.position.set(
+            curMars.x + orbX,
+            curMars.y + rotY,
+            curMars.z + rotZ
+          );
+
+          // Retrograde attitude flip: point LAM engine backward along velocity vector
+          const vNext = Math.min(1.0, v + 0.02);
+          const nextTheta = vNext * Math.PI * 0.75;
+          const nextOrbX = a * Math.cos(nextTheta) - c + (1.0 - vNext) * 24.0;
+          const nextOrbZ = b * Math.sin(nextTheta) + (1.0 - vNext) * 14.0;
+          const nextRotY = nextOrbZ * Math.sin(tilt);
+          const nextRotZ = nextOrbZ * Math.cos(tilt);
+
+          const fwdX = nextOrbX - orbX;
+          const fwdY = nextRotY - rotY;
+          const fwdZ = nextRotZ - rotZ;
+          probeGroupRef.current.lookAt(
+            curMars.x + orbX - fwdX,
+            curMars.y + rotY - fwdY,
+            curMars.z + rotZ - fwdZ
+          );
+        } else {
+          // ==========================================
+          // PHASE 5: Mars Capture Orbit (84% - 100%)
+          // Smooth stable elliptical Areocentric orbit around Mars
+          // ==========================================
+          const s = (phaseProgress - 0.84) / 0.16; // 0 to 1
+          const a = 71.0;
+          const c = 21.0;
+          const b = 67.82;
+          const tilt = 0.52;
+          const theta = Math.PI * 0.75 + s * Math.PI * 4.8;
 
           const orbX = a * Math.cos(theta) - c;
           const orbZ = b * Math.sin(theta);
@@ -171,28 +216,11 @@ export function DeepSpaceScene({
           probeGroupRef.current.lookAt(curMars.x, curMars.y, curMars.z);
         }
       } else if (isAditya) {
-        if (phaseProgress < 0.10) {
+        if (phaseProgress < 0.30) {
           // ==========================================
-          // PHASE 1: Earth Launch Injection Arc (0% - 10%)
+          // PHASE 1: Earth-bound Expanding Loops (0% - 30%)
           // ==========================================
-          const tau = phaseProgress / 0.10;
-          const p0X = earthCenter.x + 36;
-          const p0Y = earthCenter.y - 12;
-          const p0Z = earthCenter.z - 18;
-          const injX = earthCenter.x + 35.2;
-          const injY = earthCenter.y;
-          const injZ = earthCenter.z;
-
-          const posX = p0X + tau * (injX - p0X);
-          const posY = p0Y + Math.sin(tau * Math.PI * 0.5) * (injY - p0Y) + Math.sin(tau * Math.PI) * 6;
-          const posZ = p0Z + tau * (injZ - p0Z);
-          probeGroupRef.current.position.set(posX, posY, posZ);
-          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
-        } else if (phaseProgress < 0.40) {
-          // ==========================================
-          // PHASE 2: Earth-bound Expanding Loops (10% - 40%)
-          // ==========================================
-          const u = (phaseProgress - 0.10) / 0.30;
+          const u = phaseProgress / 0.30;
           const loopCount = 5;
           const currentLoop = u * loopCount;
           const loopFraction = currentLoop % 1.0;
@@ -208,28 +236,63 @@ export function DeepSpaceScene({
           const posZ = earthCenter.z + b * Math.sin(theta);
           probeGroupRef.current.position.set(posX, posY, posZ);
           probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
-        } else if (phaseProgress < 0.80) {
+        } else if (phaseProgress < 0.40) {
           // ==========================================
-          // PHASE 3: Trans-L1 Injection (TLI) Cruise (40% - 80%)
+          // PHASE 2: Trans-L1 Injection (TLI) Burn (30% - 40%)
           // ==========================================
-          const w = (phaseProgress - 0.40) / 0.40;
+          const tau = (phaseProgress - 0.30) / 0.10;
           const startX = earthCenter.x + 31.68;
           const startY = 0;
           const startZ = earthCenter.z;
+          const endX = earthCenter.x + 62;
+          const endY = 8;
+          const endZ = earthCenter.z;
+
+          const posX = startX + tau * (endX - startX);
+          const posY = startY + tau * (endY - startY);
+          const posZ = startZ + tau * (endZ - startZ);
+          probeGroupRef.current.position.set(posX, posY, posZ);
+          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
+        } else if (phaseProgress < 0.72) {
+          // ==========================================
+          // PHASE 3: Trans-L1 Cruise & TCM (40% - 72%)
+          // ==========================================
+          const w = (phaseProgress - 0.40) / 0.32;
+          const startX = earthCenter.x + 62;
+          const startY = 8;
+          const startZ = earthCenter.z;
+          const endX = l1Point.x - 12;
+          const endY = l1Point.y + 20;
+          const endZ = l1Point.z;
+
+          const posX = startX + w * (endX - startX);
+          const posY = startY + Math.sin(w * Math.PI) * 16 + w * (endY - startY);
+          const posZ = startZ + w * (endZ - startZ);
+          probeGroupRef.current.position.set(posX, posY, posZ);
+          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
+        } else if (phaseProgress < 0.84) {
+          // ==========================================
+          // PHASE 4: Halo Orbit Insertion (HOI) Braking Burn (72% - 84%)
+          // 440N LAM + AOCS thrusters fire braking burn
+          // ==========================================
+          const v = (phaseProgress - 0.72) / 0.12;
+          const startX = l1Point.x - 12;
+          const startY = l1Point.y + 20;
+          const startZ = l1Point.z;
           const endX = l1Point.x;
           const endY = l1Point.y + 24;
           const endZ = l1Point.z;
 
-          const posX = startX + w * (endX - startX);
-          const posY = startY + Math.sin(w * Math.PI) * 20 + w * (endY - startY);
-          const posZ = startZ + w * (endZ - startZ);
+          const posX = startX + v * (endX - startX);
+          const posY = startY + v * (endY - startY);
+          const posZ = startZ + v * (endZ - startZ);
           probeGroupRef.current.position.set(posX, posY, posZ);
           probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
         } else {
           // ==========================================
-          // PHASE 4: Sun-Earth L1 Halo Orbit (80% - 100%)
+          // PHASE 5: Sun-Earth L1 3D Halo Orbit (84% - 100%)
           // ==========================================
-          const s = (phaseProgress - 0.80) / 0.20;
+          const s = (phaseProgress - 0.84) / 0.16;
           const theta = s * Math.PI * 4;
 
           const haloX = l1Point.x + Math.sin(theta * 2) * 5.5;
@@ -237,7 +300,7 @@ export function DeepSpaceScene({
           const haloZ = l1Point.z + Math.sin(theta) * 30;
 
           probeGroupRef.current.position.set(haloX, haloY, haloZ);
-          probeGroupRef.current.lookAt(sunCenter);
+          probeGroupRef.current.lookAt(sunCenter.x, sunCenter.y, sunCenter.z);
         }
       }
     }
@@ -532,6 +595,9 @@ export function DeepSpaceScene({
     l1HaloCurve,
   ]);
 
+  const isMOMBraking = isMOM && phaseProgress >= 0.72 && phaseProgress <= 0.84;
+  const isAdityaBraking = isAditya && phaseProgress >= 0.72 && phaseProgress <= 0.84;
+
   return (
     <group>
       {/* ======================================================== */}
@@ -602,6 +668,34 @@ export function DeepSpaceScene({
               onHoverComponent={onHoverComponent}
               inspectData={INSPECTABLE_COMPONENTS}
             />
+            {/* 440N LAM Retro-Burn Plume during MOI (72% - 84%) */}
+            {isMOMBraking && (
+              <group position={[0, 0, -1.2]} rotation={[Math.PI, 0, 0]}>
+                <mesh position={[0, -0.8, 0]}>
+                  <coneGeometry args={[0.32, 1.8, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#f59e0b"
+                    transparent
+                    opacity={0.85}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh position={[0, -0.5, 0]}>
+                  <coneGeometry args={[0.18, 1.1, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#fef08a"
+                    transparent
+                    opacity={0.9}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <pointLight color="#f59e0b" intensity={3.5} distance={20} />
+              </group>
+            )}
           </group>
         </group>
       ) : null}
@@ -678,6 +772,34 @@ export function DeepSpaceScene({
               onHoverComponent={onHoverComponent}
               inspectData={INSPECTABLE_COMPONENTS}
             />
+            {/* 440N LAM Braking Burn Plume during HOI (72% - 84%) */}
+            {isAdityaBraking && (
+              <group position={[0, -0.9, 0]} rotation={[0, 0, Math.PI]}>
+                <mesh position={[0, -0.8, 0]}>
+                  <coneGeometry args={[0.3, 1.6, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#f59e0b"
+                    transparent
+                    opacity={0.85}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <mesh position={[0, -0.5, 0]}>
+                  <coneGeometry args={[0.16, 1.0, 16, 1, true]} />
+                  <meshBasicMaterial
+                    color="#fef08a"
+                    transparent
+                    opacity={0.9}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+                <pointLight color="#f59e0b" intensity={3.5} distance={20} />
+              </group>
+            )}
           </group>
         </group>
       ) : null}

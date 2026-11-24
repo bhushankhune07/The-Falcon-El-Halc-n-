@@ -12,6 +12,7 @@ interface SpacecraftProps {
   onSelectComponent?: (comp: InspectableComponent) => void;
   onHoverComponent?: (comp: InspectableComponent | null) => void;
   inspectData?: Record<string, InspectableComponent>;
+  explodeProgress?: number;
 }
 
 interface EOS04Props extends SpacecraftProps {
@@ -32,7 +33,9 @@ export function EOS04Spacecraft({
   onSelectComponent,
   onHoverComponent,
   inspectData,
+  explodeProgress = 0,
 }: EOS04Props) {
+  const exp = explodeProgress;
   const mliTextures = useMemo(() => getProceduralGoldMLITextures(), []);
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
   const radarTexture = useMemo(() => getProceduralRadarTexture(), []);
@@ -135,7 +138,7 @@ export function EOS04Spacecraft({
         onPointerOut={handlePointerOut}
       >
         {/* +X Solar Wing (3 articulated panels) */}
-        <group position={[0.75, 0, 0]}>
+        <group position={[0.75 + exp * 1.5, 0, 0]}>
           <mesh position={[1.8, 0, 0]} castShadow>
             <boxGeometry args={[3.4, 1.2, 0.03]} />
             {blueprintMode ? (
@@ -162,7 +165,7 @@ export function EOS04Spacecraft({
         </group>
 
         {/* -X Solar Wing (3 articulated panels) */}
-        <group position={[-0.75, 0, 0]}>
+        <group position={[-0.75 - exp * 1.5, 0, 0]}>
           <mesh position={[-1.8, 0, 0]} castShadow>
             <boxGeometry args={[3.4, 1.2, 0.03]} />
             {blueprintMode ? (
@@ -190,7 +193,7 @@ export function EOS04Spacecraft({
 
       {/* 3. C-Band SAR Active Phased Array Planar Antenna (-Y Nadir face) */}
       <group
-        position={[0, -0.92, 0]}
+        position={[0, -0.92 - exp * 1.2, 0]}
         rotation={[sarAntennaRotation, 0, 0]}
         onClick={(e) => handleClick(e, 'eos04_sar')}
         onPointerOver={(e) => handlePointerOver(e, 'eos04_sar')}
@@ -276,7 +279,9 @@ export function MOMSpacecraft({
   onSelectComponent,
   onHoverComponent,
   inspectData,
+  explodeProgress = 0,
 }: SpacecraftProps) {
+  const exp = explodeProgress;
   const mliTextures = useMemo(() => getProceduralGoldMLITextures(), []);
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
 
@@ -334,7 +339,7 @@ export function MOMSpacecraft({
 
       {/* 2. White 2.2m Parabolic High Gain Antenna (HGA) Dish with Tripod Feed Horn */}
       <group
-        position={[0, 1.15, 0]}
+        position={[0, 1.15 + exp * 1.2, 0]}
         rotation={[0.45, 0, 0]}
         onClick={(e) => handleClick(e, 'mom_hga')}
         onPointerOver={(e) => handlePointerOver(e, 'mom_hga')}
@@ -427,7 +432,7 @@ export function MOMSpacecraft({
 
       {/* 4. 440N Liquid Apogee Motor (LAM) Nozzle */}
       <mesh
-        position={[0, 0, -0.92]}
+        position={[0, 0, -0.92 - exp * 1.0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onClick={(e) => handleClick(e, 'mom_lam')}
         onPointerOver={(e) => handlePointerOver(e, 'mom_lam')}
@@ -444,7 +449,7 @@ export function MOMSpacecraft({
       </mesh>
 
       {/* 5. 3-Panel Asymmetric Solar Array Wing with Hinge Brackets */}
-      <group position={[1.5, 0, 0]} castShadow>
+      <group position={[1.5 + exp * 1.5, 0, 0]} castShadow>
         {/* Panel 1 */}
         <mesh position={[0.65, 0, 0]}>
           <boxGeometry args={[1.2, 1.2, 0.03]} />
@@ -483,7 +488,9 @@ export function AdityaL1Spacecraft({
   onSelectComponent,
   onHoverComponent,
   inspectData,
+  explodeProgress = 0,
 }: SpacecraftProps) {
+  const exp = explodeProgress;
   const mliTextures = useMemo(() => getProceduralGoldMLITextures(), []);
   const solarTexture = useMemo(() => getProceduralSolarPanelTexture(), []);
 
@@ -552,7 +559,7 @@ export function AdityaL1Spacecraft({
 
       {/* 2. VELC Visible Emission Line Coronagraph (Facing Sun) */}
       <group
-        position={[0, 1.25, 0]}
+        position={[0, 1.25 + exp * 1.0, 0]}
         onClick={(e) => handleClick(e, 'aditya_velc')}
         onPointerOver={(e) => handlePointerOver(e, 'aditya_velc')}
         onPointerOut={handlePointerOut}
@@ -575,7 +582,7 @@ export function AdityaL1Spacecraft({
 
       {/* 3. SUIT Solar Ultraviolet Imaging Telescope Housing */}
       <group
-        position={[0.45, 1.05, 0.3]}
+        position={[0.45, 1.05 + exp * 0.8, 0.3 + exp * 0.5]}
         onClick={(e) => handleClick(e, 'aditya_suit')}
         onPointerOver={(e) => handlePointerOver(e, 'aditya_suit')}
         onPointerOut={handlePointerOut}
@@ -593,7 +600,7 @@ export function AdityaL1Spacecraft({
 
       {/* 4. ASPEX & PAPA Solar Wind Particle Analyzers */}
       <group
-        position={[-0.65, 0.2, 0.45]}
+        position={[-0.65 - exp * 0.8, 0.2, 0.45]}
         onClick={(e) => handleClick(e, 'aditya_aspex')}
         onPointerOver={(e) => handlePointerOver(e, 'aditya_aspex')}
         onPointerOut={handlePointerOut}
@@ -605,7 +612,7 @@ export function AdityaL1Spacecraft({
       </group>
 
       {/* 5. Extended 6m Magnetometer Boom with 2 Sensor Cubes */}
-      <group position={[0, -0.2, -0.85]} rotation={[Math.PI / 2, 0, 0]}>
+      <group position={[0, -0.2, -0.85 - exp * 1.5]} rotation={[Math.PI / 2, 0, 0]}>
         {/* Slender Carbon Fiber Boom Rod */}
         <mesh position={[0, 2.1, 0]}>
           <cylinderGeometry args={[0.02, 0.02, 4.2, 8]} />
@@ -624,7 +631,7 @@ export function AdityaL1Spacecraft({
       </group>
 
       {/* 6. High-Gain Telemetry Dish (+Z Nadir face) */}
-      <group position={[0, -0.4, 0.9]} rotation={[0.4, 0, 0]}>
+      <group position={[0, -0.4, 0.9 + exp * 1.0]} rotation={[0.4, 0, 0]}>
         <mesh>
           <sphereGeometry args={[0.38, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.42]} />
           <meshStandardMaterial
@@ -643,7 +650,7 @@ export function AdityaL1Spacecraft({
 
       {/* 7. Twin Articulated Solar Array Wings (+X and -X) */}
       {/* +X Wing */}
-      <group position={[1.0, 0, 0]} castShadow>
+      <group position={[1.0 + exp * 1.5, 0, 0]} castShadow>
         <mesh position={[1.4, 0, 0]}>
           <boxGeometry args={[2.8, 1.1, 0.03]} />
           {blueprintMode ? (
@@ -654,7 +661,7 @@ export function AdityaL1Spacecraft({
         </mesh>
       </group>
       {/* -X Wing */}
-      <group position={[-1.0, 0, 0]} castShadow>
+      <group position={[-1.0 - exp * 1.5, 0, 0]} castShadow>
         <mesh position={[-1.4, 0, 0]}>
           <boxGeometry args={[2.8, 1.1, 0.03]} />
           {blueprintMode ? (

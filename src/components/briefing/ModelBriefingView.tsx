@@ -29,6 +29,7 @@ import {
   getProceduralMarsPBRTextures,
   createSunShaderMaterial,
   createSunCoronaShaderMaterial,
+  getProceduralCleanroomTextures,
 } from '../scene/textures/proceduralTextures';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from '../scene/inspectData';
 
@@ -230,6 +231,7 @@ export function ModelBriefingView() {
   const [hoveredComponent, setHoveredComponent] = useState<InspectableComponent | null>(null);
   const [blueprintMode, setBlueprintMode] = useState<boolean>(false);
   const [isAutoRotating, setIsAutoRotating] = useState<boolean>(true);
+  const [isExploded, setIsExploded] = useState<boolean>(false);
 
   const modelMeta = MODELS_META[selectedModelId];
   const activeComponent = selectedComponent || hoveredComponent;
@@ -446,6 +448,18 @@ export function ModelBriefingView() {
             </button>
 
             <button
+              onClick={() => setIsExploded(!isExploded)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all shadow-sm ${
+                isExploded
+                  ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
+                  : 'bg-white/95 text-slate-700 border-slate-300 hover:text-slate-950'
+              }`}
+              title="Toggle exploded subsystem diagram"
+            >
+              <span>💥 Explode: {isExploded ? 'ON' : 'OFF'}</span>
+            </button>
+
+            <button
               onClick={() => setBlueprintMode(!blueprintMode)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all shadow-sm ${
                 blueprintMode
@@ -499,6 +513,7 @@ export function ModelBriefingView() {
               <StudioModelRenderer
                 modelId={selectedModelId}
                 blueprintMode={blueprintMode}
+                isExploded={isExploded}
                 nominalFrame={nominalFrame}
                 defaultMission={defaultMission}
                 onSelectComponent={setSelectedComponent}
@@ -703,15 +718,21 @@ export function ModelBriefingView() {
  * metallic turntable pedestal, structural gantry columns, overhead roof trusses & LED high-bay strips.
  */
 function CleanroomHangarEnvironment({ blueprintMode = false }: { blueprintMode?: boolean }) {
+  const cleanroomTextures = useMemo(() => getProceduralCleanroomTextures(), []);
+
   return (
     <group>
       {/* 1. Industrial Epoxy Cleanroom Floor */}
       <mesh position={[0, -18.25, 0]} receiveShadow>
         <cylinderGeometry args={[80, 80, 0.4, 48]} />
         <meshStandardMaterial
-          color={blueprintMode ? '#030712' : '#cbd5e1'}
-          metalness={blueprintMode ? 0.2 : 0.38}
-          roughness={blueprintMode ? 0.8 : 0.26}
+          color={blueprintMode ? '#030712' : '#ffffff'}
+          map={blueprintMode ? undefined : cleanroomTextures.floorMap}
+          bumpMap={blueprintMode ? undefined : cleanroomTextures.floorBump}
+          bumpScale={0.06}
+          roughnessMap={blueprintMode ? undefined : cleanroomTextures.floorRoughness}
+          metalness={blueprintMode ? 0.2 : 0.35}
+          roughness={blueprintMode ? 0.8 : 0.25}
         />
       </mesh>
 
@@ -881,6 +902,7 @@ function CleanroomHangarEnvironment({ blueprintMode = false }: { blueprintMode?:
 function StudioModelRenderer({
   modelId,
   blueprintMode,
+  isExploded = false,
   nominalFrame,
   defaultMission,
   onSelectComponent,
@@ -888,6 +910,7 @@ function StudioModelRenderer({
 }: {
   modelId: ModelId;
   blueprintMode: boolean;
+  isExploded?: boolean;
   nominalFrame: SimFrameState;
   defaultMission: any;
   onSelectComponent: (comp: InspectableComponent) => void;
@@ -899,6 +922,7 @@ function StudioModelRenderer({
 
   const sunGroupRef = useRef<THREE.Group>(null);
   const marsGroupRef = useRef<THREE.Group>(null);
+  const explodeRef = useRef<number>(0);
 
   useEffect(() => {
     return () => {
@@ -911,6 +935,13 @@ function StudioModelRenderer({
   }, [sunMaterial, sunCoronaMaterial, marsPBR]);
 
   useFrame((_, delta) => {
+    explodeRef.current = THREE.MathUtils.damp(
+      explodeRef.current,
+      isExploded ? 1.0 : 0.0,
+      7,
+      delta
+    );
+
     if (sunMaterial.uniforms?.uTime) {
       sunMaterial.uniforms.uTime.value += delta;
     }
@@ -925,12 +956,15 @@ function StudioModelRenderer({
     }
   });
 
+  const curExplode = explodeRef.current;
+
   if (modelId === 'pslv_xl') {
     return (
       <group position={[0, -18, 0]}>
         <ProceduralPSLV
           simFrame={nominalFrame}
           mission={defaultMission}
+          explodeProgress={curExplode}
           onSelectComponent={onSelectComponent}
           onHoverComponent={onHoverComponent}
         />
@@ -943,6 +977,7 @@ function StudioModelRenderer({
       <group position={[0, 0, 0]} scale={[2.6, 2.6, 2.6]}>
         <EOS04Spacecraft
           blueprintMode={blueprintMode}
+          explodeProgress={curExplode}
           inspectData={INSPECTABLE_COMPONENTS}
           onSelectComponent={onSelectComponent}
           onHoverComponent={onHoverComponent}
@@ -956,6 +991,7 @@ function StudioModelRenderer({
       <group position={[0, 0, 0]} scale={[2.8, 2.8, 2.8]}>
         <MOMSpacecraft
           blueprintMode={blueprintMode}
+          explodeProgress={curExplode}
           inspectData={INSPECTABLE_COMPONENTS}
           onSelectComponent={onSelectComponent}
           onHoverComponent={onHoverComponent}
@@ -969,6 +1005,7 @@ function StudioModelRenderer({
       <group position={[0, 0, 0]} scale={[2.6, 2.6, 2.6]}>
         <AdityaL1Spacecraft
           blueprintMode={blueprintMode}
+          explodeProgress={curExplode}
           inspectData={INSPECTABLE_COMPONENTS}
           onSelectComponent={onSelectComponent}
           onHoverComponent={onHoverComponent}
@@ -979,7 +1016,22 @@ function StudioModelRenderer({
 
   if (modelId === 'earth') {
     return (
-      <group position={[0, 0, 0]}>
+      <group
+        position={[0, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (INSPECTABLE_COMPONENTS.ps1_core) onSelectComponent(INSPECTABLE_COMPONENTS.ps1_core);
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+          if (INSPECTABLE_COMPONENTS.ps1_core) onHoverComponent(INSPECTABLE_COMPONENTS.ps1_core);
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'auto';
+          onHoverComponent(null);
+        }}
+      >
         <ScaledEarth radius={10.0} />
       </group>
     );
@@ -987,7 +1039,23 @@ function StudioModelRenderer({
 
   if (modelId === 'mars') {
     return (
-      <group ref={marsGroupRef} position={[0, 0, 0]}>
+      <group
+        ref={marsGroupRef}
+        position={[0, 0, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (INSPECTABLE_COMPONENTS.mom_mcc) onSelectComponent(INSPECTABLE_COMPONENTS.mom_mcc);
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+          if (INSPECTABLE_COMPONENTS.mom_mcc) onHoverComponent(INSPECTABLE_COMPONENTS.mom_mcc);
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'auto';
+          onHoverComponent(null);
+        }}
+      >
         <mesh>
           <sphereGeometry args={[9.0, 64, 48]} />
           {blueprintMode ? (
@@ -1003,9 +1071,9 @@ function StudioModelRenderer({
             />
           )}
         </mesh>
-        {/* Subtle Martian atmospheric limb */}
+        {/* Subtle Martian atmospheric limb expanding with explode */}
         <mesh>
-          <sphereGeometry args={[9.3, 36, 28]} />
+          <sphereGeometry args={[9.3 + curExplode * 3.5, 36, 28]} />
           <meshBasicMaterial
             color="#f97316"
             transparent
@@ -1022,13 +1090,44 @@ function StudioModelRenderer({
   if (modelId === 'sun') {
     return (
       <group ref={sunGroupRef} position={[0, 0, 0]}>
-        <mesh material={blueprintMode ? undefined : sunMaterial}>
+        {/* Real-time GLSL Sun Sphere with 3D FBM Plasma Convection */}
+        <mesh
+          material={blueprintMode ? undefined : sunMaterial}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (INSPECTABLE_COMPONENTS.aditya_suit) onSelectComponent(INSPECTABLE_COMPONENTS.aditya_suit);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            document.body.style.cursor = 'pointer';
+            if (INSPECTABLE_COMPONENTS.aditya_suit) onHoverComponent(INSPECTABLE_COMPONENTS.aditya_suit);
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = 'auto';
+            onHoverComponent(null);
+          }}
+        >
           <sphereGeometry args={[11.0, 64, 48]} />
           {blueprintMode && <meshStandardMaterial wireframe color="#00f0ff" />}
         </mesh>
-        {/* Smooth GLSL Additive Solar Corona Glow */}
-        <mesh material={blueprintMode ? undefined : sunCoronaMaterial}>
-          <sphereGeometry args={[14.2, 48, 36]} />
+        {/* Smooth GLSL Additive Solar Corona Glow expanding with explode */}
+        <mesh
+          material={blueprintMode ? undefined : sunCoronaMaterial}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (INSPECTABLE_COMPONENTS.aditya_velc) onSelectComponent(INSPECTABLE_COMPONENTS.aditya_velc);
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            document.body.style.cursor = 'pointer';
+            if (INSPECTABLE_COMPONENTS.aditya_velc) onHoverComponent(INSPECTABLE_COMPONENTS.aditya_velc);
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = 'auto';
+            onHoverComponent(null);
+          }}
+        >
+          <sphereGeometry args={[14.2 + curExplode * 6.0, 48, 36]} />
           {blueprintMode && <meshStandardMaterial wireframe color="#00f0ff" transparent opacity={0.3} />}
         </mesh>
         <pointLight color="#fef08a" intensity={4.8} distance={140} decay={2} />

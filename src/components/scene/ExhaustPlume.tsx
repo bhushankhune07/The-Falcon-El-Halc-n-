@@ -8,9 +8,10 @@ import { createRocketPlumeShaderMaterial } from './textures/proceduralTextures';
 interface Props {
   simFrame: SimFrameState;
   stages?: StageDefinition[];
+  disablePlumes?: boolean;
 }
 
-export function ExhaustPlume({ simFrame, stages }: Props) {
+export function ExhaustPlume({ simFrame, stages, disablePlumes = false }: Props) {
   const solidPlumeRef = useRef<THREE.Group>(null);
   const liquidPlumeRef = useRef<THREE.Group>(null);
   const ps4PlumesRef = useRef<THREE.Group>(null);
@@ -94,7 +95,13 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
   const throttle = Math.min(1.0, Math.max(0.1, simFrame.thrust_N / 4800000.0));
 
   useFrame((_, delta) => {
-    if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.thrust_N <= 0) {
+    if (
+      disablePlumes ||
+      simFrame.altitude_m >= 120000 ||
+      simFrame.ps4Cutoff ||
+      simFrame.isOrbitAchieved ||
+      simFrame.thrust_N <= 0
+    ) {
       return;
     }
 
@@ -233,7 +240,13 @@ export function ExhaustPlume({ simFrame, stages }: Props) {
 
   const padSmokeOpacity = Math.max(0, 0.45 * (1.0 - t / 12.0));
 
-  if (simFrame.ps4Cutoff || simFrame.isOrbitAchieved || simFrame.thrust_N <= 0) {
+  if (
+    disablePlumes ||
+    simFrame.altitude_m >= 120000 ||
+    simFrame.ps4Cutoff ||
+    simFrame.isOrbitAchieved ||
+    simFrame.thrust_N <= 0
+  ) {
     return null;
   }
 

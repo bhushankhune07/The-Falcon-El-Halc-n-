@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { SimFrameState } from './types';
 import { ScaledEarth } from './ScaledEarth';
 import { DeepSpaceScene } from './DeepSpaceScene';
-import { EOS04Spacecraft } from './ProceduralSpacecraft';
+import { EOS04Spacecraft, MOMSpacecraft, AdityaL1Spacecraft } from './ProceduralSpacecraft';
 import { RealisticPS4Stage } from './ProceduralPSLV';
 import { INSPECTABLE_COMPONENTS, InspectableComponent } from './inspectData';
 import { MissionConfig } from '../../sim';
@@ -260,7 +260,7 @@ export function OrbitScene({
       const cTime = commissioningTime ?? 0;
 
       if (!simFrame.ps4Cutoff || cTime <= 0) {
-        ps4GroupRef.current.position.set(0, 0, -1.2);
+        ps4GroupRef.current.position.set(0, -1.4, 0);
         ps4GroupRef.current.rotation.set(0, 0, 0);
         ps4GroupRef.current.scale.setScalar(1.0);
         ps4GroupRef.current.visible = true;
@@ -269,8 +269,7 @@ export function OrbitScene({
       } else if (cTime < 2.5) {
         // Phase 1: Separation drift & retrograde pitch (0s - 2.5s)
         const tSep = cTime / 2.5;
-        ps4GroupRef.current.position.z = -1.2 - tSep * 12.0;
-        ps4GroupRef.current.position.y = -tSep * 1.5;
+        ps4GroupRef.current.position.set(0, -1.4 - tSep * 6.0, -tSep * 14.0);
         ps4GroupRef.current.rotation.x = tSep * Math.PI; // pitch retrograde
         ps4GroupRef.current.scale.setScalar(1.0);
         ps4GroupRef.current.visible = true;
@@ -279,8 +278,7 @@ export function OrbitScene({
       } else if (cTime < 5.0) {
         // Phase 2: Retrograde de-orbit burn (2.5s - 5.0s)
         const tBurn = (cTime - 2.5) / 2.5;
-        ps4GroupRef.current.position.z = -13.2 - tBurn * 18.0;
-        ps4GroupRef.current.position.y = -1.5 - Math.pow(tBurn, 1.4) * 20.0; // curving downward toward atmosphere
+        ps4GroupRef.current.position.set(0, -7.4 - Math.pow(tBurn, 1.4) * 22.0, -14.0 - tBurn * 22.0);
         ps4GroupRef.current.rotation.x = Math.PI + Math.sin(tBurn * Math.PI * 4) * 0.05;
         ps4GroupRef.current.scale.setScalar(1.0);
         ps4GroupRef.current.visible = true;
@@ -289,8 +287,7 @@ export function OrbitScene({
       } else if (cTime < 8.5) {
         // Phase 3: Atmospheric entry, tumbling & fiery burn-up (5.0s - 8.5s)
         const tReentry = (cTime - 5.0) / 3.5;
-        ps4GroupRef.current.position.z = -31.2 - tReentry * 24.0;
-        ps4GroupRef.current.position.y = -21.5 - tReentry * 26.0; // deep into upper atmosphere
+        ps4GroupRef.current.position.set(0, -29.4 - tReentry * 28.0, -36.0 - tReentry * 26.0);
         // Chaotic tumbling
         ps4GroupRef.current.rotation.x += delta * 4.2;
         ps4GroupRef.current.rotation.y += delta * 3.6;
@@ -319,8 +316,8 @@ export function OrbitScene({
       }
     }
 
-    // 4. C-band SAR Radar Beam Sweeping Ground Track
-    const isRadarActive = simFrame.ps4Cutoff && dtCutoff >= 6.0;
+    // 4. C-band SAR Radar Beam Sweeping Ground Track (EOS-04 only)
+    const isRadarActive = mission?.id === 'pslv-c52-eos04' && simFrame.ps4Cutoff && dtCutoff >= 6.0;
 
     if (radarConeRef.current) {
       radarConeRef.current.visible = isRadarActive;
@@ -383,7 +380,7 @@ export function OrbitScene({
             {/* PS4 Spent Upper Stage with De-orbit Burn & Atmospheric Re-entry */}
             <group
               ref={ps4GroupRef}
-              position={[0, 0, -1.2]}
+              position={[0, -1.4, 0]}
               onClick={(e) => {
                 e.stopPropagation();
                 if (INSPECTABLE_COMPONENTS['ps4_twin'] && onSelectComponent) {
@@ -471,34 +468,52 @@ export function OrbitScene({
               </group>
             </group>
 
-            {/* High-Fidelity EOS-04 Spacecraft in LVLH Nadir Alignment */}
-            <EOS04Spacecraft
-              blueprintMode={blueprintMode}
-              solarDeployScale={solarDeployScale}
-              sarAntennaRotation={sarAntennaRotation}
-              isRcsFiring={isRcsFiring}
-              onSelectComponent={onSelectComponent}
-              onHoverComponent={onHoverComponent}
-              inspectData={INSPECTABLE_COMPONENTS}
-            />
-
-            {/* Radar Swath Cone: Translucent beam sweeping down strictly toward Nadir */}
-            <mesh
-              ref={radarConeRef}
-              position={[0, -0.92 - (orbitRadius - earthRadius) / 2, 0]}
-              rotation={[0, 0, 0]}
-              visible={false}
-            >
-              <coneGeometry args={[3.2, orbitRadius - earthRadius, 24, 1, true]} />
-              <meshBasicMaterial
-                color="#22d3ee"
-                transparent
-                opacity={0.3}
-                side={THREE.DoubleSide}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
+            {/* Spacecraft Model Rendering - Mission Specific */}
+            {mission?.id === 'pslv-c25-mom' ? (
+              <MOMSpacecraft
+                blueprintMode={blueprintMode}
+                onSelectComponent={onSelectComponent}
+                onHoverComponent={onHoverComponent}
+                inspectData={INSPECTABLE_COMPONENTS}
               />
-            </mesh>
+            ) : mission?.id === 'pslv-c57-aditya-l1' ? (
+              <AdityaL1Spacecraft
+                blueprintMode={blueprintMode}
+                onSelectComponent={onSelectComponent}
+                onHoverComponent={onHoverComponent}
+                inspectData={INSPECTABLE_COMPONENTS}
+              />
+            ) : (
+              <>
+                <EOS04Spacecraft
+                  blueprintMode={blueprintMode}
+                  solarDeployScale={solarDeployScale}
+                  sarAntennaRotation={sarAntennaRotation}
+                  isRcsFiring={isRcsFiring}
+                  onSelectComponent={onSelectComponent}
+                  onHoverComponent={onHoverComponent}
+                  inspectData={INSPECTABLE_COMPONENTS}
+                />
+
+                {/* Radar Swath Cone: Translucent beam sweeping down strictly toward Nadir */}
+                <mesh
+                  ref={radarConeRef}
+                  position={[0, -0.92 - (orbitRadius - earthRadius) / 2, 0]}
+                  rotation={[0, 0, 0]}
+                  visible={false}
+                >
+                  <coneGeometry args={[3.2, orbitRadius - earthRadius, 24, 1, true]} />
+                  <meshBasicMaterial
+                    color="#22d3ee"
+                    transparent
+                    opacity={0.3}
+                    side={THREE.DoubleSide}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+              </>
+            )}
 
             {/* Blueprint 3D Dimension Callouts */}
             {blueprintMode && (

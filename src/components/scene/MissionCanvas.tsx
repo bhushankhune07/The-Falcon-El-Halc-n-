@@ -173,8 +173,9 @@ export function MissionCanvas({
             missionId={mission?.id}
           />
 
-          {/* Damped natural OrbitControls for 3D inspection and navigation */}
+          {/* Damped natural OrbitControls for 3D inspection and navigation (locked during launch ascent) */}
           <OrbitControls
+            enabled={isHigh || deepSpaceActive}
             enableDamping
             dampingFactor={0.05}
             maxDistance={deepSpaceActive ? 800 : isHigh ? 400 : 120}

@@ -18,6 +18,7 @@ interface Props {
   showInternalPayload?: boolean;
   onSelectComponent?: (comp: InspectableComponent) => void;
   onHoverComponent?: (comp: InspectableComponent | null) => void;
+  explodeProgress?: number;
 }
 
 interface BellNozzleProps {
@@ -403,7 +404,14 @@ export function RealisticPS4Stage({
   );
 }
 
-export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverComponent }: Props) {
+export function ProceduralPSLV({
+  simFrame,
+  mission,
+  showInternalPayload,
+  onSelectComponent,
+  onHoverComponent,
+  explodeProgress = 0,
+}: Props) {
   const rootRef = useRef<THREE.Group>(null);
   const fairingLeftRef = useRef<THREE.Group>(null);
   const fairingRightRef = useRef<THREE.Group>(null);
@@ -457,6 +465,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
   const fairingHeight = 8.5;
   const straponRadius = 0.5;
   const straponHeight = 12.0;
+
+  // Exploded Stage Diagram Offsets (for Section 4 Showroom inspection)
+  const expRadial = explodeProgress * 4.0;
+  const expPS2 = explodeProgress * 3.8;
+  const expPS3 = explodeProgress * 7.5;
+  const expPS4 = explodeProgress * 11.2;
+  const expFairing = explodeProgress * 15.0;
+  const expFairingX = explodeProgress * 3.5;
 
   // Staging elapsed times derived from mission stages
   const t = simFrame.time_s;
@@ -634,8 +650,8 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
         // Separation displacement: Radial push outward + downward gravity drag + backward tilt
         const radialPush = isDetached ? Math.min(40, dtSep * 6.0) : 0;
         const dropY = isDetached ? -dtSep * 7.0 - 0.5 * 9.8 * dtSep * dtSep * 0.1 : 0;
-        const posX = (baseRadius + radialPush) * dirX;
-        const posZ = (baseRadius + radialPush) * dirZ;
+        const posX = (baseRadius + radialPush + expRadial) * dirX;
+        const posZ = (baseRadius + radialPush + expRadial) * dirZ;
         const posY = straponHeight / 2 + 0.5 + dropY;
 
         // Tumble rotation
@@ -725,7 +741,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       {/* INTERSTAGE 1/2 TRUSS & VENT BANDS */}
       {/* ======================================================== */}
       {!simFrame.ps1Detached ? (
-        <group position={[0, ps1Height + 0.6, 0]}>
+        <group position={[0, ps1Height + 0.6 + expPS2, 0]}>
           <mesh>
             <cylinderGeometry args={[coreRadius - 0.05, coreRadius, 1.2, 24, 2, true]} />
             <meshStandardMaterial color="#334155" wireframe metalness={0.7} roughness={0.4} />
@@ -744,9 +760,9 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
         <group
           position={[
             0,
-            simFrame.ps2Detached
+            (simFrame.ps2Detached
               ? ps1Height + 1.2 + ps2Height / 2 - dtPS2 * 8.0 - 0.5 * 9.8 * dtPS2 * dtPS2 * 0.05
-              : ps1Height + 1.2 + ps2Height / 2,
+              : ps1Height + 1.2 + ps2Height / 2) + expPS2,
             0,
           ]}
           rotation={[simFrame.ps2Detached ? dtPS2 * 0.05 : 0, 0, 0]}
@@ -793,9 +809,9 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
         <group
           position={[
             0,
-            simFrame.ps3Detached
+            (simFrame.ps3Detached
               ? ps1Height + ps2Height + 1.5 + ps3Height / 2 - dtPS3 * 7.0
-              : ps1Height + ps2Height + 1.5 + ps3Height / 2,
+              : ps1Height + ps2Height + 1.5 + ps3Height / 2) + expPS3,
             0,
           ]}
           onClick={(e) => handleClick(e, 'ps3_hps3')}
@@ -831,7 +847,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       {/* ======================================================== */}
       {/* STAGE 4: REALISTIC PS4 TWIN LIQUID ENGINES (MMH + MON3)   */}
       {/* ======================================================== */}
-      <group position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2, 0]}>
+      <group position={[0, ps1Height + ps2Height + ps3Height + 1.8 + ps4Height / 2 + expPS4, 0]}>
         <RealisticPS4Stage
           isFiring={!simFrame.ps4Cutoff && simFrame.activeStages.includes('ps4') && simFrame.thrust_N > 1000}
           onClick={(e) => handleClick(e, 'ps4_twin')}
@@ -843,7 +859,10 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       {/* ======================================================== */}
       {/* EOS-04 SPACECRAFT (RADAR IMAGING SATELLITE RISAT-1A) */}
       {/* ======================================================== */}
-      <group position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 3.2, 0]}>
+      <group
+        position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 3.2 + expFairing, 0]}
+        visible={simFrame.fairingSeparated || explodeProgress > 0.05 || !!showInternalPayload}
+      >
         {/* Satellite Bus Structure (Gold MLI blanket) */}
         <mesh
           castShadow
@@ -942,7 +961,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       {(!simFrame.fairingSeparated || dtFairing < 20) ? (
         <group
           ref={fairingLeftRef}
-          position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
+          position={[-expFairingX, ps1Height + ps2Height + ps3Height + ps4Height + 1.8 + expFairing, 0]}
           onClick={(e) => handleClick(e, 'payload_fairing')}
           onPointerOver={(e) => handlePointerOver(e, 'payload_fairing')}
           onPointerOut={handlePointerOut}
@@ -960,6 +979,8 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               bumpScale={0.03}
               roughnessMap={fuselageTextures.roughnessMap}
               side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
             />
           </mesh>
           {/* Inner Acoustic Soundproofing Foam Layer */}
@@ -967,7 +988,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <cylinderGeometry
               args={[coreRadius + 0.07, coreRadius + 0.07, fairingHeight * 0.68, 32, 1, false, 0.04, Math.PI - 0.08]}
             />
-            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#334155"
+              roughness={0.85}
+              metalness={0.2}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+            />
           </mesh>
 
           {/* Outer Shell Conical Ogive Nosecone Half */}
@@ -983,6 +1011,8 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               bumpScale={0.03}
               roughnessMap={fuselageTextures.roughnessMap}
               side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
             />
           </mesh>
           {/* Inner Nosecone Acoustic Layer */}
@@ -990,7 +1020,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <coneGeometry
               args={[coreRadius + 0.07, fairingHeight * 0.28, 32, 1, false, 0.04, Math.PI - 0.08]}
             />
-            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#334155"
+              roughness={0.85}
+              metalness={0.2}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+            />
           </mesh>
         </group>
       ) : null}
@@ -999,7 +1036,7 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
       {(!simFrame.fairingSeparated || dtFairing < 20) ? (
         <group
           ref={fairingRightRef}
-          position={[0, ps1Height + ps2Height + ps3Height + ps4Height + 1.8, 0]}
+          position={[expFairingX, ps1Height + ps2Height + ps3Height + ps4Height + 1.8 + expFairing, 0]}
           onClick={(e) => handleClick(e, 'payload_fairing')}
           onPointerOver={(e) => handlePointerOver(e, 'payload_fairing')}
           onPointerOut={handlePointerOut}
@@ -1017,6 +1054,8 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               bumpScale={0.03}
               roughnessMap={fuselageTextures.roughnessMap}
               side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
             />
           </mesh>
           {/* Inner Acoustic Soundproofing Foam Layer */}
@@ -1024,7 +1063,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <cylinderGeometry
               args={[coreRadius + 0.07, coreRadius + 0.07, fairingHeight * 0.68, 32, 1, false, Math.PI + 0.04, Math.PI - 0.08]}
             />
-            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#334155"
+              roughness={0.85}
+              metalness={0.2}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+            />
           </mesh>
 
           {/* Outer Shell Conical Ogive Nosecone Half */}
@@ -1040,6 +1086,8 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
               bumpScale={0.03}
               roughnessMap={fuselageTextures.roughnessMap}
               side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
             />
           </mesh>
           {/* Inner Nosecone Acoustic Layer */}
@@ -1047,7 +1095,14 @@ export function ProceduralPSLV({ simFrame, mission, onSelectComponent, onHoverCo
             <coneGeometry
               args={[coreRadius + 0.07, fairingHeight * 0.28, 32, 1, false, Math.PI + 0.04, Math.PI - 0.08]}
             />
-            <meshStandardMaterial color="#334155" roughness={0.85} metalness={0.2} side={THREE.DoubleSide} />
+            <meshStandardMaterial
+              color="#334155"
+              roughness={0.85}
+              metalness={0.2}
+              side={THREE.DoubleSide}
+              transparent={false}
+              depthWrite={true}
+            />
           </mesh>
         </group>
       ) : null}
